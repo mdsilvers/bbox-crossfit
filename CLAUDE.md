@@ -5,7 +5,7 @@
 BBOX CrossFit is a React-based gym management app for CrossFit boxes. Coaches program WODs (Workouts of the Day) and athletes log their results.
 
 **Status:** Production Ready
-**Lines of Code:** ~3,200
+**Lines of Code:** ~3,600
 **Main File:** `src/crossfit-box-app.jsx`
 
 ---
@@ -63,8 +63,9 @@ wods (id, name, date, type, group_type, movements, notes, posted_by, posted_by_n
 -- Unique constraint: (date, group_type)
 
 -- results: Athlete workout results
-results (id, wod_id, athlete_id, athlete_name, athlete_email, date, time, movements, notes, photo_url, created_at, updated_at)
+results (id, wod_id, athlete_id, athlete_name, athlete_email, date, time, movements, notes, photo_url, custom_wod_name, custom_wod_type, created_at, updated_at)
 -- Unique constraint: (athlete_id, date)
+-- custom_wod_name/type: For athlete-created workouts when not doing coach WOD
 ```
 
 ### Row Level Security
@@ -90,13 +91,14 @@ supabase-schema.sql       # Database schema with RLS policies
 
 ### Key sections in crossfit-box-app.jsx:
 - Lines 1-50: Imports, constants, logo component
-- Lines 50-110: State declarations
-- Lines 110-320: Auth functions (signup, login, logout, forgot password)
-- Lines 320-550: Data loading functions (WODs, results, missed WODs)
-- Lines 550-750: Coach functions (postWOD, editWOD, deleteWOD)
-- Lines 750-1050: Login/Signup/Forgot Password UI
-- Lines 1050-2450: Coach Dashboard UI
-- Lines 2450-3200: Athlete Dashboard UI
+- Lines 50-130: State declarations (including custom workout states)
+- Lines 130-350: Auth functions (signup, login, logout, forgot password)
+- Lines 350-600: Data loading functions (WODs, results, missed WODs)
+- Lines 600-850: Coach functions (postWOD, editWOD, deleteWOD)
+- Lines 850-1000: Custom workout functions (startCustomWorkout, logCustomWorkout, etc.)
+- Lines 1000-1300: Login/Signup/Forgot Password UI
+- Lines 1300-2700: Coach Dashboard UI
+- Lines 2700-3600: Athlete Dashboard UI (including custom workout form)
 
 ---
 
@@ -144,13 +146,15 @@ All workout history views are sorted by WOD date (latest first), not by logged/c
 ### Athlete Features
 - View today's WOD
 - Log workout results with time, weights, notes, photo
+- Log custom workouts (when traveling or doing different programming)
 - View workout history
 - Log missed WODs (past 7 days)
 - Edit/delete own results
 
 ### UI Features
 - Photo modal (click to view full-screen)
-- Workout type badges on all history views
+- Workout type badges on all history views (red for coach WODs, violet for custom)
+- Custom workout indicator badges in history
 - Responsive design (mobile-first)
 
 ---
@@ -197,8 +201,9 @@ Add to `src/index.css` - Tailwind v4 requires explicit utility definitions for s
 2. **Forgot Password:** Click link → Enter email → Check email → Reset password
 3. **Coach WOD:** Create WOD → Edit → Delete (with/without athlete results)
 4. **Athlete Log:** Log workout → Edit → Delete → Verify in History
-5. **Missed WODs:** Verify past WODs appear, can log them
-6. **Athletes Tab:** Must show ALL athletes, not just coach
+5. **Custom Workout:** Log custom WOD (no coach WOD) → Verify violet badge + "Custom" label in history
+6. **Missed WODs:** Verify past WODs appear, can log them
+7. **Athletes Tab:** Must show ALL athletes, not just coach (including custom workouts)
 
 ---
 
