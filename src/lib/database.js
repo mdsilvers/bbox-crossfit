@@ -285,7 +285,9 @@ export async function createResult(result, userId, userName, userEmail) {
       time: result.time || null,
       movements: result.movements,
       notes: result.notes || null,
-      photo_url: result.photoData || null, // For now, store base64 directly; could migrate to Supabase Storage later
+      photo_url: result.photoData || null,
+      custom_wod_name: result.customWodName || null,
+      custom_wod_type: result.customWodType || null,
     })
     .select()
     .single();
@@ -302,6 +304,8 @@ export async function updateResult(id, result) {
       movements: result.movements,
       notes: result.notes || null,
       photo_url: result.photoData || null,
+      custom_wod_name: result.customWodName || null,
+      custom_wod_type: result.customWodType || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -376,6 +380,8 @@ export function resultToAppFormat(result) {
     movements: result.movements,
     notes: result.notes,
     photoData: result.photo_url,
+    customWodName: result.custom_wod_name,
+    customWodType: result.custom_wod_type,
     loggedAt: result.created_at,
   };
 }
