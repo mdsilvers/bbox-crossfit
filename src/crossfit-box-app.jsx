@@ -1359,8 +1359,88 @@ export default function CrossFitBoxApp() {
                   </div>
                 </div>
 
-                {/* Today's WOD - Same as Athlete View */}
-                {todayWOD ? (
+                {/* Today's WOD or Custom Workout Summary */}
+                {todayWOD && myResult.isCustomResult ? (
+                  /* Custom Workout Completed - Show custom workout instead of daily WOD */
+                  <div className="bg-slate-800 rounded-2xl p-5 mb-6 border border-violet-700/50">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-green-400">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </span>
+                      <span className="text-green-400 text-sm font-semibold">Today's Workout Logged</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <h3 className="text-lg sm:text-xl font-bold text-white">
+                        {myResult.customWodName ? `"${myResult.customWodName}"` : 'Custom Workout'}
+                      </h3>
+                      {myResult.customWodType && (
+                        <span className="bg-violet-600 text-white text-xs px-2.5 py-1 rounded-lg font-semibold">
+                          {myResult.customWodType}
+                        </span>
+                      )}
+                      <span className="bg-slate-600 text-slate-300 text-xs px-2.5 py-1 rounded-lg">
+                        Custom
+                      </span>
+                    </div>
+                    {myResult.time && (
+                      <div className="text-slate-300 text-sm mb-3">Time: <span className="text-white font-semibold">{myResult.time}</span></div>
+                    )}
+
+                    {/* Custom workout movements */}
+                    <div className="bg-slate-700/50 rounded-xl p-4 mb-4">
+                      <div className="space-y-2">
+                        {myResult.movements.map((movement, idx) => (
+                          <div key={idx} className="flex items-center gap-3">
+                            <div className="bg-violet-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                              {idx + 1}
+                            </div>
+                            <div className="flex-1">
+                              <span className="text-white font-medium">{movement.name}</span>
+                              {movement.reps && <span className="text-slate-400 ml-2 text-sm">{movement.reps}</span>}
+                              {movement.weight && <span className="text-slate-400 ml-2 text-sm">@ {movement.weight}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* View Today's WOD link */}
+                    <div className="border-t border-slate-700 pt-3 mt-3">
+                      <div className="text-slate-400 text-xs mb-2">Today's coach WOD is also available:</div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white text-sm font-medium">
+                            {todayWOD.name ? `"${todayWOD.name}"` : "Daily WOD"}
+                          </span>
+                          <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                            {todayWOD.type}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setCoachView('workout')}
+                          className="text-red-400 hover:text-red-300 text-sm font-medium"
+                        >
+                          Log Instead
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Edit WOD button for coaches */}
+                    <div className="mt-3">
+                      <button
+                        onClick={() => editWOD(todayWOD)}
+                        className="w-full bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg font-semibold transition-colors text-sm flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                        Edit WOD
+                      </button>
+                    </div>
+                  </div>
+                ) : todayWOD ? (
                   <div className="bg-slate-800 rounded-2xl p-5 mb-6 border border-slate-700">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
@@ -1378,10 +1458,10 @@ export default function CrossFitBoxApp() {
                         <div className="text-slate-400 text-sm mb-4">
                           Posted by {todayWOD.postedBy}
                         </div>
-                        
+
                         {/* Status Badge */}
                         <div className="flex items-center gap-2 mb-4">
-                          {myResult.existingResultId && !myResult.isCustomResult ? (
+                          {myResult.existingResultId ? (
                             <div className="flex items-center gap-2">
                               <span className="text-green-400 text-sm flex items-center gap-1">
                                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -1392,13 +1472,6 @@ export default function CrossFitBoxApp() {
                               {myResult.time && (
                                 <span className="text-slate-400 text-sm">• {myResult.time}</span>
                               )}
-                            </div>
-                          ) : myResult.isCustomResult ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-violet-400 text-sm flex items-center gap-1">
-                                <Dumbbell className="w-4 h-4" />
-                                Custom WOD logged{myResult.customWodName ? `: "${myResult.customWodName}"` : ''}
-                              </span>
                             </div>
                           ) : (
                             <span className="text-yellow-400 text-sm flex items-center gap-1">
@@ -1455,7 +1528,7 @@ export default function CrossFitBoxApp() {
                         onClick={() => setCoachView('workout')}
                         className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl font-semibold transition-colors text-sm flex items-center justify-center gap-2"
                       >
-                        {myResult.existingResultId && !myResult.isCustomResult ? (
+                        {myResult.existingResultId ? (
                           <>
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -3031,7 +3104,74 @@ export default function CrossFitBoxApp() {
             </div>
 
             {/* Quick Action - Today's WOD Status */}
-            {todayWOD ? (
+            {todayWOD && myResult.isCustomResult ? (
+              /* Custom Workout Completed - Show custom workout instead of daily WOD */
+              <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 sm:p-6 mb-8 border border-violet-700/50 shadow-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-green-400">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                  <span className="text-green-400 text-sm font-semibold">Today's Workout Logged</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <h3 className="text-lg sm:text-xl font-bold text-white">
+                    {myResult.customWodName ? `"${myResult.customWodName}"` : 'Custom Workout'}
+                  </h3>
+                  {myResult.customWodType && (
+                    <span className="bg-violet-600 text-white text-xs px-2.5 py-1 rounded-lg font-semibold">
+                      {myResult.customWodType}
+                    </span>
+                  )}
+                  <span className="bg-slate-600 text-slate-300 text-xs px-2.5 py-1 rounded-lg">
+                    Custom
+                  </span>
+                </div>
+                {myResult.time && (
+                  <div className="text-slate-300 text-sm mb-3">Time: <span className="text-white font-semibold">{myResult.time}</span></div>
+                )}
+
+                {/* Custom workout movements */}
+                <div className="bg-slate-700/50 rounded-xl p-4 mb-4">
+                  <div className="space-y-2">
+                    {myResult.movements.map((movement, idx) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className="bg-violet-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-white font-medium">{movement.name}</span>
+                          {movement.reps && <span className="text-slate-400 ml-2 text-sm">{movement.reps}</span>}
+                          {movement.weight && <span className="text-slate-400 ml-2 text-sm">@ {movement.weight}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* View Today's WOD link */}
+                <div className="border-t border-slate-700 pt-3">
+                  <div className="text-slate-400 text-xs mb-2">Today's coach WOD is also available:</div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-medium">
+                        {todayWOD.name ? `"${todayWOD.name}"` : "Daily WOD"}
+                      </span>
+                      <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                        {todayWOD.type}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setCurrentView('workout')}
+                      className="text-red-400 hover:text-red-300 text-sm font-medium"
+                    >
+                      Log Instead
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : todayWOD ? (
               <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 sm:p-6 mb-8 border border-slate-700/50 shadow-lg">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
@@ -3049,10 +3189,10 @@ export default function CrossFitBoxApp() {
                     <div className="text-slate-400 text-sm mb-4">
                       Posted by {todayWOD.postedBy}
                     </div>
-                    
+
                     {/* Status Badge */}
                     <div className="flex items-center gap-2 mb-4">
-                      {myResult.existingResultId && !myResult.isCustomResult ? (
+                      {myResult.existingResultId ? (
                         <div className="flex items-center gap-2">
                           <span className="text-green-400 text-sm flex items-center gap-1">
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -3063,13 +3203,6 @@ export default function CrossFitBoxApp() {
                           {myResult.time && (
                             <span className="text-slate-400 text-sm">• {myResult.time}</span>
                           )}
-                        </div>
-                      ) : myResult.isCustomResult ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-violet-400 text-sm flex items-center gap-1">
-                            <Dumbbell className="w-4 h-4" />
-                            Custom WOD logged{myResult.customWodName ? `: "${myResult.customWodName}"` : ''}
-                          </span>
                         </div>
                       ) : (
                         <span className="text-yellow-400 text-sm flex items-center gap-1">
@@ -3114,7 +3247,7 @@ export default function CrossFitBoxApp() {
                   onClick={() => setCurrentView('workout')}
                   className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 text-white px-5 py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-red-600/25 touch-target-lg"
                 >
-                  {myResult.existingResultId && !myResult.isCustomResult ? (
+                  {myResult.existingResultId ? (
                     <>
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
