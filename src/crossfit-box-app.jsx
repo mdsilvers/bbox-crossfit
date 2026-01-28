@@ -808,9 +808,9 @@ export default function CrossFitBoxApp() {
                 </div>
               )}
 
-              <div className="space-y-5">
+              <div className="space-y-8">
                 <div>
-                  <label className="block text-slate-400 text-sm font-medium mb-2">Email</label>
+                  <label className="block text-slate-400 text-sm font-medium mb-2.5">Email</label>
                   <input
                     type="email"
                     placeholder="you@example.com"
@@ -824,7 +824,7 @@ export default function CrossFitBoxApp() {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 text-sm font-medium mb-2">Password</label>
+                  <label className="block text-slate-400 text-sm font-medium mb-2.5">Password</label>
                   <input
                     type="password"
                     placeholder="••••••••"
@@ -886,9 +886,9 @@ export default function CrossFitBoxApp() {
                 </div>
               )}
 
-              <div className="space-y-5">
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-slate-400 text-sm font-medium mb-2">Full Name <span className="text-red-500">*</span></label>
+                  <label className="block text-slate-400 text-sm font-medium mb-2.5">Full Name <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     placeholder="John Smith"
@@ -901,7 +901,7 @@ export default function CrossFitBoxApp() {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 text-sm font-medium mb-2">Email <span className="text-red-500">*</span></label>
+                  <label className="block text-slate-400 text-sm font-medium mb-2.5">Email <span className="text-red-500">*</span></label>
                   <input
                     type="email"
                     placeholder="you@example.com"
@@ -914,7 +914,7 @@ export default function CrossFitBoxApp() {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 text-sm font-medium mb-2">Password <span className="text-red-500">*</span></label>
+                  <label className="block text-slate-400 text-sm font-medium mb-2.5">Password <span className="text-red-500">*</span></label>
                   <input
                     type="password"
                     placeholder="Min. 6 characters"
@@ -930,7 +930,7 @@ export default function CrossFitBoxApp() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-slate-400 text-sm font-medium mb-2">Confirm Password <span className="text-red-500">*</span></label>
+                  <label className="block text-slate-400 text-sm font-medium mb-2.5">Confirm Password <span className="text-red-500">*</span></label>
                   <input
                     type="password"
                     placeholder="Re-enter password"
@@ -956,7 +956,7 @@ export default function CrossFitBoxApp() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-slate-400 text-sm font-medium mb-2">I am a...</label>
+                    <label className="block text-slate-400 text-sm font-medium mb-2.5">I am a...</label>
                     <select
                       value={signupRole}
                       onChange={(e) => setSignupRole(e.target.value)}
@@ -967,7 +967,7 @@ export default function CrossFitBoxApp() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-slate-400 text-sm font-medium mb-2">Group</label>
+                    <label className="block text-slate-400 text-sm font-medium mb-2.5">Group</label>
                     <select
                       value={signupGroup}
                       onChange={(e) => setSignupGroup(e.target.value)}
@@ -1029,12 +1029,9 @@ export default function CrossFitBoxApp() {
           {/* Header */}
           <div className="sticky top-0 bg-slate-900 z-10 px-4 py-4 border-b border-slate-700">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <BBoxLogo className="w-12 h-6" />
-                <div>
-                  <h1 className="text-xl font-bold text-white">BBOX</h1>
-                  <p className="text-slate-400 text-sm">{currentUser.name}</p>
-                </div>
+              <div className="flex items-center gap-4">
+                <BBoxLogo className="w-14 h-7" />
+                <h1 className="text-xl font-semibold text-white">{currentUser.name}</h1>
               </div>
               <button
                 onClick={handleLogout}
@@ -1475,18 +1472,20 @@ export default function CrossFitBoxApp() {
                 {/* Workout List */}
                 {(() => {
                   const myWorkouts = workoutResults.filter(r => r.athleteEmail === currentUser.email);
-                  const filteredWorkouts = myWorkouts.filter(result => {
-                    if (!coachHistorySearch) return true;
-                    const searchLower = coachHistorySearch.toLowerCase();
-                    const wod = allWODs.find(w => w.date === result.date);
-                    const dateStr = new Date(result.date).toLocaleDateString('en-US', { 
-                      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
-                    }).toLowerCase();
-                    return (
-                      (wod?.name?.toLowerCase() || '').includes(searchLower) ||
-                      dateStr.includes(searchLower)
-                    );
-                  });
+                  const filteredWorkouts = myWorkouts
+                    .filter(result => {
+                      if (!coachHistorySearch) return true;
+                      const searchLower = coachHistorySearch.toLowerCase();
+                      const wod = allWODs.find(w => w.date === result.date);
+                      const dateStr = new Date(result.date).toLocaleDateString('en-US', {
+                        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+                      }).toLowerCase();
+                      return (
+                        (wod?.name?.toLowerCase() || '').includes(searchLower) ||
+                        dateStr.includes(searchLower)
+                      );
+                    })
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
 
                   if (filteredWorkouts.length === 0) {
                     return (
@@ -2189,8 +2188,8 @@ export default function CrossFitBoxApp() {
 
                   // Convert to array and calculate stats
                   const athletes = Object.values(athleteData).map(athlete => {
-                    const workouts = athlete.workouts.sort((a, b) => 
-                      new Date(b.loggedAt) - new Date(a.loggedAt)
+                    const workouts = athlete.workouts.sort((a, b) =>
+                      new Date(b.date) - new Date(a.date)
                     );
                     
                     // Calculate stats
@@ -2441,12 +2440,9 @@ export default function CrossFitBoxApp() {
         {/* Header */}
         <div className="sticky top-0 bg-slate-900 z-10 px-4 py-4 border-b border-slate-700">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <BBoxLogo className="w-12 h-6" />
-              <div>
-                <h1 className="text-xl font-bold text-white">My Workouts</h1>
-                <p className="text-slate-400 text-sm">Welcome, {currentUser.name}</p>
-              </div>
+            <div className="flex items-center gap-4">
+              <BBoxLogo className="w-14 h-7" />
+              <h1 className="text-xl font-semibold text-white">{currentUser.name}</h1>
             </div>
             <button
               onClick={handleLogout}
@@ -2896,18 +2892,20 @@ export default function CrossFitBoxApp() {
 
             {/* Workout List */}
             {(() => {
-              const filteredWorkouts = workoutResults.filter(result => {
-                if (!historySearch) return true;
-                const searchLower = historySearch.toLowerCase();
-                const wod = allWODs.find(w => w.date === result.date);
-                const dateStr = new Date(result.date).toLocaleDateString('en-US', { 
-                  weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' 
-                }).toLowerCase();
-                return (
-                  (wod?.name?.toLowerCase() || '').includes(searchLower) ||
-                  dateStr.includes(searchLower)
-                );
-              });
+              const filteredWorkouts = workoutResults
+                .filter(result => {
+                  if (!historySearch) return true;
+                  const searchLower = historySearch.toLowerCase();
+                  const wod = allWODs.find(w => w.date === result.date);
+                  const dateStr = new Date(result.date).toLocaleDateString('en-US', {
+                    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
+                  }).toLowerCase();
+                  return (
+                    (wod?.name?.toLowerCase() || '').includes(searchLower) ||
+                    dateStr.includes(searchLower)
+                  );
+                })
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
 
               if (filteredWorkouts.length === 0) {
                 return (
