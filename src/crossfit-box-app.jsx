@@ -103,6 +103,16 @@ export default function CrossFitBoxApp() {
   const [coachHistorySearch, setCoachHistorySearch] = useState('');
   const [photoModalUrl, setPhotoModalUrl] = useState(null); // For viewing photos in full screen
 
+  // Custom workout state (for athletes creating their own workouts)
+  const [isCustomWorkout, setIsCustomWorkout] = useState(false);
+  const [customWod, setCustomWod] = useState({
+    name: '',
+    type: 'For Time',
+    movements: [{ name: '', reps: '', notes: '' }]
+  });
+  const [customMovementInput, setCustomMovementInput] = useState(['']);
+  const [showCustomMovementDropdown, setShowCustomMovementDropdown] = useState([false]);
+
   // Initialize auth state listener
   useEffect(() => {
     let mounted = true;
@@ -593,10 +603,152 @@ export default function CrossFitBoxApp() {
       notes: '',
       photoData: null
     });
+    setIsCustomWorkout(false);
     setCurrentView('workout');
     // Also update coach view if applicable
     if (currentUser.role === 'coach') {
       setCoachView('workout');
+    }
+  };
+
+  // Custom workout functions for athletes
+  const startCustomWorkout = () => {
+    setIsCustomWorkout(true);
+    setEditingWorkout(null);
+    setCustomWod({
+      name: '',
+      type: 'For Time',
+      movements: [{ name: '', reps: '', notes: '' }]
+    });
+    setCustomMovementInput(['']);
+    setShowCustomMovementDropdown([false]);
+    setMyResult({
+      time: '',
+      movements: [],
+      notes: '',
+      photoData: null
+    });
+    setCurrentView('workout');
+    if (currentUser.role === 'coach') {
+      setCoachView('workout');
+    }
+  };
+
+  const cancelCustomWorkout = () => {
+    setIsCustomWorkout(false);
+    setCustomWod({
+      name: '',
+      type: 'For Time',
+      movements: [{ name: '', reps: '', notes: '' }]
+    });
+    setCustomMovementInput(['']);
+    setShowCustomMovementDropdown([false]);
+    setCurrentView('dashboard');
+    if (currentUser.role === 'coach') {
+      setCoachView('dashboard');
+    }
+  };
+
+  const addCustomMovement = () => {
+    setCustomWod({
+      ...customWod,
+      movements: [...customWod.movements, { name: '', reps: '', notes: '' }]
+    });
+    setCustomMovementInput([...customMovementInput, '']);
+    setShowCustomMovementDropdown([...showCustomMovementDropdown, false]);
+  };
+
+  const removeCustomMovement = (index) => {
+    if (customWod.movements.length <= 1) return;
+    setCustomWod({
+      ...customWod,
+      movements: customWod.movements.filter((_, i) => i !== index)
+    });
+    setCustomMovementInput(customMovementInput.filter((_, i) => i !== index));
+    setShowCustomMovementDropdown(showCustomMovementDropdown.filter((_, i) => i !== index));
+  };
+
+  const updateCustomMovement = (index, field, value) => {
+    const updated = [...customWod.movements];
+    updated[index][field] = value;
+    setCustomWod({ ...customWod, movements: updated });
+  };
+
+  const handleCustomMovementInput = (index, value) => {
+    const newInputs = [...customMovementInput];
+    newInputs[index] = value;
+    setCustomMovementInput(newInputs);
+
+    // Update the movement name
+    updateCustomMovement(index, 'name', value);
+
+    // Show/hide dropdown based on input
+    const newDropdowns = [...showCustomMovementDropdown];
+    newDropdowns[index] = value.length > 0;
+    setShowCustomMovementDropdown(newDropdowns);
+  };
+
+  const selectCustomMovement = (index, movementName) => {
+    const newInputs = [...customMovementInput];
+    newInputs[index] = movementName;
+    setCustomMovementInput(newInputs);
+    updateCustomMovement(index, 'name', movementName);
+
+    const newDropdowns = [...showCustomMovementDropdown];
+    newDropdowns[index] = false;
+    setShowCustomMovementDropdown(newDropdowns);
+  };
+
+  const logCustomWorkout = async () => {
+    // Validate custom workout has at least one movement with a name
+    const validMovements = customWod.movements.filter(m => m.name.trim());
+    if (validMovements.length === 0) {
+      alert('Please add at least one movement to your workout');
+      return;
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const resultData = {
+      wodId: null, // No coach WOD
+      date: today,
+      time: myResult.time,
+      movements: validMovements.map(m => ({ ...m, weight: '' })),
+      notes: myResult.notes,
+      photoData: myResult.photoData,
+      customWodName: customWod.name || null,
+      customWodType: customWod.type,
+    };
+
+    try {
+      if (myResult.existingResultId) {
+        await db.updateResult(myResult.existingResultId, resultData);
+        alert('Custom workout updated!');
+      } else {
+        await db.createResult(resultData, currentUser.id, currentUser.name, currentUser.email);
+        alert('Custom workout logged! Great job!');
+      }
+
+      const results = await loadMyResults();
+      await loadMissedWODs(results);
+
+      if (currentUser.role === 'coach') {
+        await loadAllResults();
+      }
+
+      // Reset custom workout state
+      setIsCustomWorkout(false);
+      setCustomWod({
+        name: '',
+        type: 'For Time',
+        movements: [{ name: '', reps: '', notes: '' }]
+      });
+      setCurrentView('dashboard');
+      if (currentUser.role === 'coach') {
+        setCoachView('dashboard');
+      }
+    } catch (error) {
+      alert('Error logging custom workout: ' + error.message);
     }
   };
 
@@ -1478,12 +1630,23 @@ export default function CrossFitBoxApp() {
                                         <div className="flex items-center gap-2 flex-wrap">
                                           {wod?.name ? (
                                             <h4 className="text-white font-bold text-base">"{wod.name}"</h4>
+                                          ) : result.customWodName ? (
+                                            <h4 className="text-white font-bold text-base">"{result.customWodName}"</h4>
                                           ) : (
-                                            <h4 className="text-white font-medium text-base">Daily WOD</h4>
+                                            <h4 className="text-white font-medium text-base">{result.customWodType ? 'Custom Workout' : 'Daily WOD'}</h4>
                                           )}
-                                          {wod?.type && (
+                                          {wod?.type ? (
                                             <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
                                               {wod.type}
+                                            </span>
+                                          ) : result.customWodType && (
+                                            <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                              {result.customWodType}
+                                            </span>
+                                          )}
+                                          {!wod && result.customWodName && (
+                                            <span className="bg-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
+                                              Custom
                                             </span>
                                           )}
                                         </div>
@@ -1676,12 +1839,23 @@ export default function CrossFitBoxApp() {
                                       <div className="flex items-center gap-2 flex-wrap">
                                         {wod?.name ? (
                                           <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
+                                        ) : result.customWodName ? (
+                                          <h4 className="text-white font-bold text-lg">"{result.customWodName}"</h4>
                                         ) : (
-                                          <h4 className="text-white font-medium">Daily WOD</h4>
+                                          <h4 className="text-white font-medium">{result.customWodType ? 'Custom Workout' : 'Daily WOD'}</h4>
                                         )}
-                                        {wod?.type && (
+                                        {wod?.type ? (
                                           <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
                                             {wod.type}
+                                          </span>
+                                        ) : result.customWodType && (
+                                          <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                            {result.customWodType}
+                                          </span>
+                                        )}
+                                        {!wod && result.customWodName && (
+                                          <span className="bg-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
+                                            Custom
                                           </span>
                                         )}
                                       </div>
@@ -1697,8 +1871,8 @@ export default function CrossFitBoxApp() {
                                     <div className="flex items-center gap-1 text-slate-400">
                                       <Calendar className="w-3 h-3 text-red-500" />
                                       <span className="text-slate-300">
-                                        {new Date(result.date).toLocaleDateString('en-US', { 
-                                          weekday: 'short', month: 'short', day: 'numeric' 
+                                        {new Date(result.date).toLocaleDateString('en-US', {
+                                          weekday: 'short', month: 'short', day: 'numeric'
                                         })}
                                       </span>
                                     </div>
@@ -2447,12 +2621,23 @@ export default function CrossFitBoxApp() {
                                             <div className="flex items-center gap-2 flex-wrap mb-1">
                                               {wod?.name ? (
                                                 <h5 className="text-white font-bold text-sm">"{wod.name}"</h5>
+                                              ) : workout.customWodName ? (
+                                                <h5 className="text-white font-bold text-sm">"{workout.customWodName}"</h5>
                                               ) : (
-                                                <h5 className="text-white font-medium text-sm">Daily WOD</h5>
+                                                <h5 className="text-white font-medium text-sm">{workout.customWodType ? 'Custom Workout' : 'Daily WOD'}</h5>
                                               )}
-                                              {wod?.type && (
+                                              {wod?.type ? (
                                                 <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
                                                   {wod.type}
+                                                </span>
+                                              ) : workout.customWodType && (
+                                                <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                                  {workout.customWodType}
+                                                </span>
+                                              )}
+                                              {!wod && workout.customWodName && (
+                                                <span className="bg-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
+                                                  Custom
                                                 </span>
                                               )}
                                             </div>
@@ -2756,12 +2941,29 @@ export default function CrossFitBoxApp() {
                     </>
                   )}
                 </button>
+
+                {/* Custom Workout Option */}
+                {!myResult.existingResultId && (
+                  <button
+                    onClick={startCustomWorkout}
+                    className="w-full mt-3 text-slate-400 hover:text-white text-sm font-medium transition-colors"
+                  >
+                    Did a different workout? Log custom WOD
+                  </button>
+                )}
               </div>
             ) : (
               <div className="bg-slate-800 rounded-2xl p-6 sm:p-8 text-center border border-slate-700 mb-6">
                 <Calendar className="w-16 h-16 text-slate-500 mx-auto mb-4" />
                 <p className="text-white font-semibold text-lg mb-2">No WOD Posted Yet</p>
-                <p className="text-slate-400 text-sm">Your coach hasn't posted today's workout</p>
+                <p className="text-slate-400 text-sm mb-4">Your coach hasn't posted today's workout</p>
+                <button
+                  onClick={startCustomWorkout}
+                  className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors inline-flex items-center gap-2"
+                >
+                  <Plus className="w-5 h-5" />
+                  Log Custom Workout
+                </button>
               </div>
             )}
 
@@ -2906,12 +3108,23 @@ export default function CrossFitBoxApp() {
                                   <div className="flex items-center gap-2 flex-wrap">
                                     {wod?.name ? (
                                       <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
+                                    ) : result.customWodName ? (
+                                      <h4 className="text-white font-bold text-lg">"{result.customWodName}"</h4>
                                     ) : (
-                                      <h4 className="text-white font-medium">Daily WOD</h4>
+                                      <h4 className="text-white font-medium">{result.customWodType ? 'Custom Workout' : 'Daily WOD'}</h4>
                                     )}
-                                    {wod?.type && (
+                                    {wod?.type ? (
                                       <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
                                         {wod.type}
+                                      </span>
+                                    ) : result.customWodType && (
+                                      <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                        {result.customWodType}
+                                      </span>
+                                    )}
+                                    {!wod && result.customWodName && (
+                                      <span className="bg-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
+                                        Custom
                                       </span>
                                     )}
                                   </div>
@@ -3123,12 +3336,23 @@ export default function CrossFitBoxApp() {
                                   <div className="flex items-center gap-2 flex-wrap">
                                     {wod?.name ? (
                                       <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
+                                    ) : result.customWodName ? (
+                                      <h4 className="text-white font-bold text-lg">"{result.customWodName}"</h4>
                                     ) : (
-                                      <h4 className="text-white font-medium">Daily WOD</h4>
+                                      <h4 className="text-white font-medium">{result.customWodType ? 'Custom Workout' : 'Daily WOD'}</h4>
                                     )}
-                                    {wod?.type && (
+                                    {wod?.type ? (
                                       <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
                                         {wod.type}
+                                      </span>
+                                    ) : result.customWodType && (
+                                      <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                        {result.customWodType}
+                                      </span>
+                                    )}
+                                    {!wod && result.customWodName && (
+                                      <span className="bg-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
+                                        Custom
                                       </span>
                                     )}
                                   </div>
@@ -3412,10 +3636,190 @@ export default function CrossFitBoxApp() {
               </button>
             )}
           </div>
-        ) : (
+        ) : !isCustomWorkout ? (
           <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-8 text-center border border-slate-700/50 mb-6">
             <Calendar className="w-16 h-16 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400">No WOD posted for today yet. Check back soon!</p>
+            <p className="text-slate-400 mb-4">No WOD posted for today yet.</p>
+            <button
+              onClick={startCustomWorkout}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors inline-flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Log Custom Workout
+            </button>
+          </div>
+        ) : (
+          /* Custom Workout Form */
+          <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white">Custom Workout</h2>
+              <button
+                onClick={cancelCustomWorkout}
+                className="text-slate-400 hover:text-white p-2"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Workout Name */}
+            <div className="mb-4">
+              <label className="block text-slate-300 mb-2">Workout Name (optional)</label>
+              <input
+                type="text"
+                placeholder="e.g., Travel WOD, Hotel Workout"
+                value={customWod.name}
+                onChange={(e) => setCustomWod({ ...customWod, name: e.target.value })}
+                className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Workout Type */}
+            <div className="mb-4">
+              <label className="block text-slate-300 mb-2">Workout Type</label>
+              <select
+                value={customWod.type}
+                onChange={(e) => setCustomWod({ ...customWod, type: e.target.value })}
+                className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+              >
+                <option value="For Time">For Time</option>
+                <option value="AMRAP">AMRAP</option>
+                <option value="EMOM">EMOM</option>
+                <option value="Rounds">Rounds</option>
+                <option value="Strength">Strength</option>
+                <option value="Skill">Skill</option>
+                <option value="Chipper">Chipper</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            {/* Movements */}
+            <div className="mb-4">
+              <label className="block text-slate-300 mb-2">Movements</label>
+              <div className="space-y-3">
+                {customWod.movements.map((movement, idx) => (
+                  <div key={idx} className="bg-slate-700 rounded-lg p-4">
+                    <div className="flex items-start gap-2 mb-2">
+                      <div className="flex-1 relative">
+                        <input
+                          type="text"
+                          placeholder="Movement name"
+                          value={customMovementInput[idx] || ''}
+                          onChange={(e) => handleCustomMovementInput(idx, e.target.value)}
+                          onFocus={() => {
+                            const newDropdowns = showCustomMovementDropdown.map((_, i) => i === idx && customMovementInput[idx]?.length > 0);
+                            setShowCustomMovementDropdown(newDropdowns);
+                          }}
+                          className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
+                        />
+                        {showCustomMovementDropdown[idx] && (
+                          <div className="absolute z-10 w-full bg-slate-800 border border-slate-600 rounded-lg mt-1 max-h-48 overflow-y-auto">
+                            {STANDARD_MOVEMENTS
+                              .filter(m => m.toLowerCase().includes((customMovementInput[idx] || '').toLowerCase()))
+                              .slice(0, 8)
+                              .map((m) => (
+                                <button
+                                  key={m}
+                                  onClick={() => selectCustomMovement(idx, m)}
+                                  className="w-full text-left px-3 py-2 text-white hover:bg-slate-700"
+                                >
+                                  {m}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                      {customWod.movements.length > 1 && (
+                        <button
+                          onClick={() => removeCustomMovement(idx)}
+                          className="text-red-400 hover:text-red-300 p-2"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Reps (e.g., 21-15-9, 10 rounds)"
+                      value={movement.reps}
+                      onChange={(e) => updateCustomMovement(idx, 'reps', e.target.value)}
+                      className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={addCustomMovement}
+                className="mt-3 text-red-500 hover:text-red-400 font-medium flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" /> Add Movement
+              </button>
+            </div>
+
+            {/* Time Result */}
+            <div className="mb-4">
+              <label className="block text-slate-300 mb-2">Your Time / Score</label>
+              <input
+                type="text"
+                placeholder="e.g., 12:30, 5 rounds + 10 reps"
+                value={myResult.time}
+                onChange={(e) => setMyResult({ ...myResult, time: e.target.value })}
+                className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="mb-4">
+              <label className="block text-slate-300 mb-2">Notes</label>
+              <textarea
+                placeholder="How did it feel? Any modifications?"
+                value={myResult.notes}
+                onChange={(e) => setMyResult({ ...myResult, notes: e.target.value })}
+                className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none h-24"
+              />
+            </div>
+
+            {/* Photo Upload */}
+            <div className="mb-6">
+              <label className="block text-slate-300 mb-2">Photo (optional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="w-full text-slate-400"
+              />
+              {myResult.photoData && (
+                <div className="mt-2 relative inline-block">
+                  <img
+                    src={myResult.photoData}
+                    alt="Workout"
+                    className="h-24 rounded"
+                  />
+                  <button
+                    onClick={() => setMyResult({ ...myResult, photoData: null })}
+                    className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white p-1 rounded-full"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={logCustomWorkout}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Log Custom Workout
+            </button>
+
+            <button
+              onClick={cancelCustomWorkout}
+              className="w-full mt-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-4 px-6 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         )}
           </>

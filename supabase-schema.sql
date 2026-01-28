@@ -42,10 +42,16 @@ CREATE TABLE IF NOT EXISTS results (
   movements JSONB NOT NULL DEFAULT '[]',
   notes TEXT,
   photo_url TEXT,
+  custom_wod_name TEXT,
+  custom_wod_type TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(athlete_id, date)
 );
+
+-- Migration: Add custom WOD fields to existing results table
+-- ALTER TABLE results ADD COLUMN IF NOT EXISTS custom_wod_name TEXT;
+-- ALTER TABLE results ADD COLUMN IF NOT EXISTS custom_wod_type TEXT;
 
 -- ==================== ROW LEVEL SECURITY ====================
 
