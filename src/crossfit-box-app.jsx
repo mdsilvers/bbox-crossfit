@@ -522,12 +522,16 @@ export default function CrossFitBoxApp() {
 
       if (todayResult) {
         // User has already logged today - preserve their existing data
+        const isCustom = !!(todayResult.customWodName || todayResult.customWodType);
         setMyResult({
           time: todayResult.time,
           movements: todayResult.movements,
           notes: todayResult.notes,
           photoData: todayResult.photoData,
-          existingResultId: todayResult.id
+          existingResultId: todayResult.id,
+          isCustomResult: isCustom,
+          customWodName: todayResult.customWodName,
+          customWodType: todayResult.customWodType,
         });
       } else if (currentWOD) {
         // No result for today yet - initialize with WOD template
@@ -907,12 +911,16 @@ export default function CrossFitBoxApp() {
       const today = new Date().toISOString().split('T')[0];
       const todayResult = workoutResults.find(r => r.date === today);
       if (todayResult) {
+        const isCustom = !!(todayResult.customWodName || todayResult.customWodType);
         setMyResult({
           time: todayResult.time,
           movements: todayResult.movements,
           notes: todayResult.notes,
           photoData: todayResult.photoData,
-          existingResultId: todayResult.id
+          existingResultId: todayResult.id,
+          isCustomResult: isCustom,
+          customWodName: todayResult.customWodName,
+          customWodType: todayResult.customWodType,
         });
       } else {
         setMyResult({
@@ -1351,8 +1359,88 @@ export default function CrossFitBoxApp() {
                   </div>
                 </div>
 
-                {/* Today's WOD - Same as Athlete View */}
-                {todayWOD ? (
+                {/* Today's WOD or Custom Workout Summary */}
+                {todayWOD && myResult.isCustomResult ? (
+                  /* Custom Workout Completed - Show custom workout instead of daily WOD */
+                  <div className="bg-slate-800 rounded-2xl p-5 mb-6 border border-violet-700/50">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-green-400">
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </span>
+                      <span className="text-green-400 text-sm font-semibold">Today's Workout Logged</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <h3 className="text-lg sm:text-xl font-bold text-white">
+                        {myResult.customWodName ? `"${myResult.customWodName}"` : 'Custom Workout'}
+                      </h3>
+                      {myResult.customWodType && (
+                        <span className="bg-violet-600 text-white text-xs px-2.5 py-1 rounded-lg font-semibold">
+                          {myResult.customWodType}
+                        </span>
+                      )}
+                      <span className="bg-slate-600 text-slate-300 text-xs px-2.5 py-1 rounded-lg">
+                        Custom
+                      </span>
+                    </div>
+                    {myResult.time && (
+                      <div className="text-slate-300 text-sm mb-3">Time: <span className="text-white font-semibold">{myResult.time}</span></div>
+                    )}
+
+                    {/* Custom workout movements */}
+                    <div className="bg-slate-700/50 rounded-xl p-4 mb-4">
+                      <div className="space-y-2">
+                        {myResult.movements.map((movement, idx) => (
+                          <div key={idx} className="flex items-center gap-3">
+                            <div className="bg-violet-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                              {idx + 1}
+                            </div>
+                            <div className="flex-1">
+                              <span className="text-white font-medium">{movement.name}</span>
+                              {movement.reps && <span className="text-slate-400 ml-2 text-sm">{movement.reps}</span>}
+                              {movement.weight && <span className="text-slate-400 ml-2 text-sm">@ {movement.weight}</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* View Today's WOD link */}
+                    <div className="border-t border-slate-700 pt-3 mt-3">
+                      <div className="text-slate-400 text-xs mb-2">Today's coach WOD is also available:</div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white text-sm font-medium">
+                            {todayWOD.name ? `"${todayWOD.name}"` : "Daily WOD"}
+                          </span>
+                          <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                            {todayWOD.type}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => setCoachView('workout')}
+                          className="text-red-400 hover:text-red-300 text-sm font-medium"
+                        >
+                          Log Instead
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Edit WOD button for coaches */}
+                    <div className="mt-3">
+                      <button
+                        onClick={() => editWOD(todayWOD)}
+                        className="w-full bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg font-semibold transition-colors text-sm flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                        Edit WOD
+                      </button>
+                    </div>
+                  </div>
+                ) : todayWOD ? (
                   <div className="bg-slate-800 rounded-2xl p-5 mb-6 border border-slate-700">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
@@ -1370,7 +1458,7 @@ export default function CrossFitBoxApp() {
                         <div className="text-slate-400 text-sm mb-4">
                           Posted by {todayWOD.postedBy}
                         </div>
-                        
+
                         {/* Status Badge */}
                         <div className="flex items-center gap-2 mb-4">
                           {myResult.existingResultId ? (
@@ -1393,7 +1481,7 @@ export default function CrossFitBoxApp() {
                           )}
                           {(() => {
                             const today = new Date().toISOString().split('T')[0];
-                            const athletesCompleted = allAthleteResults.filter(r => 
+                            const athletesCompleted = allAthleteResults.filter(r =>
                               r.date === today && r.athleteEmail !== currentUser.email
                             ).length;
                             return athletesCompleted > 0 && (
@@ -1628,23 +1716,23 @@ export default function CrossFitBoxApp() {
                                     <div className="flex items-start justify-between mb-2">
                                       <div className="flex-1">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                          {wod?.name ? (
-                                            <h4 className="text-white font-bold text-base">"{wod.name}"</h4>
-                                          ) : result.customWodName ? (
+                                          {result.customWodName ? (
                                             <h4 className="text-white font-bold text-base">"{result.customWodName}"</h4>
+                                          ) : wod?.name ? (
+                                            <h4 className="text-white font-bold text-base">"{wod.name}"</h4>
                                           ) : (
-                                            <h4 className="text-white font-medium text-base">{result.customWodType ? 'Custom Workout' : 'Daily WOD'}</h4>
+                                            <h4 className="text-white font-medium text-base">Daily WOD</h4>
                                           )}
-                                          {wod?.type ? (
-                                            <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
-                                              {wod.type}
-                                            </span>
-                                          ) : result.customWodType && (
+                                          {result.customWodType ? (
                                             <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
                                               {result.customWodType}
                                             </span>
+                                          ) : wod?.type && (
+                                            <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                              {wod.type}
+                                            </span>
                                           )}
-                                          {!wod && result.customWodName && (
+                                          {(result.customWodName || result.customWodType) && (
                                             <span className="bg-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
                                               Custom
                                             </span>
@@ -1837,23 +1925,23 @@ export default function CrossFitBoxApp() {
                                   <div className="flex items-start justify-between mb-2">
                                     <div className="flex-1">
                                       <div className="flex items-center gap-2 flex-wrap">
-                                        {wod?.name ? (
-                                          <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
-                                        ) : result.customWodName ? (
+                                        {result.customWodName ? (
                                           <h4 className="text-white font-bold text-lg">"{result.customWodName}"</h4>
+                                        ) : wod?.name ? (
+                                          <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
                                         ) : (
-                                          <h4 className="text-white font-medium">{result.customWodType ? 'Custom Workout' : 'Daily WOD'}</h4>
+                                          <h4 className="text-white font-medium">Daily WOD</h4>
                                         )}
-                                        {wod?.type ? (
-                                          <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
-                                            {wod.type}
-                                          </span>
-                                        ) : result.customWodType && (
+                                        {result.customWodType ? (
                                           <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
                                             {result.customWodType}
                                           </span>
+                                        ) : wod?.type && (
+                                          <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                            {wod.type}
+                                          </span>
                                         )}
-                                        {!wod && result.customWodName && (
+                                        {(result.customWodName || result.customWodType) && (
                                           <span className="bg-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
                                             Custom
                                           </span>
@@ -1941,7 +2029,7 @@ export default function CrossFitBoxApp() {
             {/* My Workout View */}
             {coachView === 'workout' && (
               <>
-                {(todayWOD || editingWorkout) ? (
+                {((todayWOD || editingWorkout) && !isCustomWorkout) ? (
                   <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
                     {editingWorkout && (
                       <div className="bg-blue-600 text-white px-4 py-3 rounded-lg mb-4">
@@ -2092,11 +2180,176 @@ export default function CrossFitBoxApp() {
                         Cancel
                       </button>
                     )}
+
+                    {!myResult.existingResultId && !editingWorkout && (
+                      <button
+                        onClick={startCustomWorkout}
+                        className="w-full mt-3 text-slate-400 hover:text-white text-sm font-medium transition-colors"
+                      >
+                        Did a different workout? Log custom WOD
+                      </button>
+                    )}
                   </div>
-                ) : (
+                ) : !isCustomWorkout ? (
                   <div className="bg-slate-800 rounded-lg p-8 text-center border border-slate-700">
                     <Calendar className="w-16 h-16 text-slate-600 mx-auto mb-3" />
-                    <p className="text-slate-400">No WOD posted for today yet</p>
+                    <p className="text-slate-400 mb-4">No WOD posted for today yet</p>
+                    <button
+                      onClick={startCustomWorkout}
+                      className="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors inline-flex items-center gap-2"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Log Custom Workout
+                    </button>
+                  </div>
+                ) : (
+                  /* Custom Workout Form for Coach */
+                  <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-bold text-white">Custom Workout</h2>
+                      <button
+                        onClick={cancelCustomWorkout}
+                        className="text-slate-400 hover:text-white p-2"
+                      >
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Workout Name */}
+                    <div className="mb-4">
+                      <label className="block text-slate-300 mb-2">Workout Name (optional)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., Travel WOD, Hotel Workout"
+                        value={customWod.name}
+                        onChange={(e) => setCustomWod({ ...customWod, name: e.target.value })}
+                        className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Workout Type */}
+                    <div className="mb-4">
+                      <label className="block text-slate-300 mb-2">Workout Type</label>
+                      <select
+                        value={customWod.type}
+                        onChange={(e) => setCustomWod({ ...customWod, type: e.target.value })}
+                        className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+                      >
+                        <option value="For Time">For Time</option>
+                        <option value="AMRAP">AMRAP</option>
+                        <option value="EMOM">EMOM</option>
+                        <option value="Rounds">Rounds</option>
+                        <option value="Strength">Strength</option>
+                        <option value="Skill">Skill</option>
+                        <option value="Chipper">Chipper</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    {/* Movements */}
+                    <div className="mb-4">
+                      <label className="block text-slate-300 mb-2">Movements</label>
+                      <div className="space-y-3">
+                        {customWod.movements.map((movement, idx) => (
+                          <div key={idx} className="bg-slate-700 rounded-lg p-4">
+                            <div className="flex items-start gap-2 mb-2">
+                              <div className="flex-1 relative">
+                                <input
+                                  type="text"
+                                  placeholder="Movement name"
+                                  value={customMovementInput[idx] || ''}
+                                  onChange={(e) => handleCustomMovementInput(idx, e.target.value)}
+                                  onFocus={() => {
+                                    const newDropdowns = showCustomMovementDropdown.map((_, i) => i === idx && customMovementInput[idx]?.length > 0);
+                                    setShowCustomMovementDropdown(newDropdowns);
+                                  }}
+                                  className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
+                                />
+                                {showCustomMovementDropdown[idx] && (
+                                  <div className="absolute z-10 w-full bg-slate-800 border border-slate-600 rounded-lg mt-1 max-h-48 overflow-y-auto">
+                                    {STANDARD_MOVEMENTS
+                                      .filter(m => m.toLowerCase().includes((customMovementInput[idx] || '').toLowerCase()))
+                                      .slice(0, 8)
+                                      .map((m) => (
+                                        <button
+                                          key={m}
+                                          onClick={() => selectCustomMovement(idx, m)}
+                                          className="w-full text-left px-3 py-2 text-white hover:bg-slate-700"
+                                        >
+                                          {m}
+                                        </button>
+                                      ))}
+                                  </div>
+                                )}
+                              </div>
+                              {customWod.movements.length > 1 && (
+                                <button
+                                  onClick={() => removeCustomMovement(idx)}
+                                  className="text-red-400 hover:text-red-300 p-2"
+                                >
+                                  <Trash2 className="w-5 h-5" />
+                                </button>
+                              )}
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Reps (e.g., 21-15-9, 10 rounds)"
+                              value={movement.reps}
+                              onChange={(e) => updateCustomMovement(idx, 'reps', e.target.value)}
+                              className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={addCustomMovement}
+                        className="mt-3 text-red-400 hover:text-red-300 text-sm font-medium flex items-center gap-1"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Movement
+                      </button>
+                    </div>
+
+                    {/* Time */}
+                    <div className="mb-4">
+                      <label className="block text-slate-300 mb-2">Time / Score</label>
+                      <input
+                        type="text"
+                        placeholder="e.g., 15:30, 5 rounds + 10 reps"
+                        value={myResult.time}
+                        onChange={(e) => setMyResult({ ...myResult, time: e.target.value })}
+                        className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Notes */}
+                    <div className="mb-4">
+                      <label className="block text-slate-300 mb-2">Notes</label>
+                      <textarea
+                        placeholder="How did it feel? Any modifications?"
+                        value={myResult.notes}
+                        onChange={(e) => setMyResult({ ...myResult, notes: e.target.value })}
+                        className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none h-24"
+                      />
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      onClick={logCustomWorkout}
+                      className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-5 h-5" />
+                      Log Custom Workout
+                    </button>
+
+                    <button
+                      onClick={cancelCustomWorkout}
+                      className="w-full mt-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
                   </div>
                 )}
               </>
@@ -2619,23 +2872,23 @@ export default function CrossFitBoxApp() {
                                         <div className="flex items-start justify-between mb-2">
                                           <div className="flex-1">
                                             <div className="flex items-center gap-2 flex-wrap mb-1">
-                                              {wod?.name ? (
-                                                <h5 className="text-white font-bold text-sm">"{wod.name}"</h5>
-                                              ) : workout.customWodName ? (
+                                              {workout.customWodName ? (
                                                 <h5 className="text-white font-bold text-sm">"{workout.customWodName}"</h5>
+                                              ) : wod?.name ? (
+                                                <h5 className="text-white font-bold text-sm">"{wod.name}"</h5>
                                               ) : (
-                                                <h5 className="text-white font-medium text-sm">{workout.customWodType ? 'Custom Workout' : 'Daily WOD'}</h5>
+                                                <h5 className="text-white font-medium text-sm">Daily WOD</h5>
                                               )}
-                                              {wod?.type ? (
-                                                <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
-                                                  {wod.type}
-                                                </span>
-                                              ) : workout.customWodType && (
+                                              {workout.customWodType ? (
                                                 <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
                                                   {workout.customWodType}
                                                 </span>
+                                              ) : wod?.type && (
+                                                <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                                  {wod.type}
+                                                </span>
                                               )}
-                                              {!wod && workout.customWodName && (
+                                              {(workout.customWodName || workout.customWodType) && (
                                                 <span className="bg-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
                                                   Custom
                                                 </span>
@@ -2851,7 +3104,74 @@ export default function CrossFitBoxApp() {
             </div>
 
             {/* Quick Action - Today's WOD Status */}
-            {todayWOD ? (
+            {todayWOD && myResult.isCustomResult ? (
+              /* Custom Workout Completed - Show custom workout instead of daily WOD */
+              <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 sm:p-6 mb-8 border border-violet-700/50 shadow-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-green-400">
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                  <span className="text-green-400 text-sm font-semibold">Today's Workout Logged</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <h3 className="text-lg sm:text-xl font-bold text-white">
+                    {myResult.customWodName ? `"${myResult.customWodName}"` : 'Custom Workout'}
+                  </h3>
+                  {myResult.customWodType && (
+                    <span className="bg-violet-600 text-white text-xs px-2.5 py-1 rounded-lg font-semibold">
+                      {myResult.customWodType}
+                    </span>
+                  )}
+                  <span className="bg-slate-600 text-slate-300 text-xs px-2.5 py-1 rounded-lg">
+                    Custom
+                  </span>
+                </div>
+                {myResult.time && (
+                  <div className="text-slate-300 text-sm mb-3">Time: <span className="text-white font-semibold">{myResult.time}</span></div>
+                )}
+
+                {/* Custom workout movements */}
+                <div className="bg-slate-700/50 rounded-xl p-4 mb-4">
+                  <div className="space-y-2">
+                    {myResult.movements.map((movement, idx) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className="bg-violet-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                          {idx + 1}
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-white font-medium">{movement.name}</span>
+                          {movement.reps && <span className="text-slate-400 ml-2 text-sm">{movement.reps}</span>}
+                          {movement.weight && <span className="text-slate-400 ml-2 text-sm">@ {movement.weight}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* View Today's WOD link */}
+                <div className="border-t border-slate-700 pt-3">
+                  <div className="text-slate-400 text-xs mb-2">Today's coach WOD is also available:</div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-medium">
+                        {todayWOD.name ? `"${todayWOD.name}"` : "Daily WOD"}
+                      </span>
+                      <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                        {todayWOD.type}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setCurrentView('workout')}
+                      className="text-red-400 hover:text-red-300 text-sm font-medium"
+                    >
+                      Log Instead
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : todayWOD ? (
               <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 sm:p-6 mb-8 border border-slate-700/50 shadow-lg">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
@@ -2869,7 +3189,7 @@ export default function CrossFitBoxApp() {
                     <div className="text-slate-400 text-sm mb-4">
                       Posted by {todayWOD.postedBy}
                     </div>
-                    
+
                     {/* Status Badge */}
                     <div className="flex items-center gap-2 mb-4">
                       {myResult.existingResultId ? (
@@ -3106,23 +3426,23 @@ export default function CrossFitBoxApp() {
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    {wod?.name ? (
-                                      <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
-                                    ) : result.customWodName ? (
+                                    {result.customWodName ? (
                                       <h4 className="text-white font-bold text-lg">"{result.customWodName}"</h4>
+                                    ) : wod?.name ? (
+                                      <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
                                     ) : (
-                                      <h4 className="text-white font-medium">{result.customWodType ? 'Custom Workout' : 'Daily WOD'}</h4>
+                                      <h4 className="text-white font-medium">Daily WOD</h4>
                                     )}
-                                    {wod?.type ? (
-                                      <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
-                                        {wod.type}
-                                      </span>
-                                    ) : result.customWodType && (
+                                    {result.customWodType ? (
                                       <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
                                         {result.customWodType}
                                       </span>
+                                    ) : wod?.type && (
+                                      <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                        {wod.type}
+                                      </span>
                                     )}
-                                    {!wod && result.customWodName && (
+                                    {(result.customWodName || result.customWodType) && (
                                       <span className="bg-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
                                         Custom
                                       </span>
@@ -3267,6 +3587,7 @@ export default function CrossFitBoxApp() {
                   }).toLowerCase();
                   return (
                     (wod?.name?.toLowerCase() || '').includes(searchLower) ||
+                    (result.customWodName?.toLowerCase() || '').includes(searchLower) ||
                     dateStr.includes(searchLower)
                   );
                 })
@@ -3334,23 +3655,23 @@ export default function CrossFitBoxApp() {
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    {wod?.name ? (
-                                      <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
-                                    ) : result.customWodName ? (
+                                    {result.customWodName ? (
                                       <h4 className="text-white font-bold text-lg">"{result.customWodName}"</h4>
+                                    ) : wod?.name ? (
+                                      <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
                                     ) : (
-                                      <h4 className="text-white font-medium">{result.customWodType ? 'Custom Workout' : 'Daily WOD'}</h4>
+                                      <h4 className="text-white font-medium">Daily WOD</h4>
                                     )}
-                                    {wod?.type ? (
-                                      <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
-                                        {wod.type}
-                                      </span>
-                                    ) : result.customWodType && (
+                                    {result.customWodType ? (
                                       <span className="bg-violet-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
                                         {result.customWodType}
                                       </span>
+                                    ) : wod?.type && (
+                                      <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                        {wod.type}
+                                      </span>
                                     )}
-                                    {!wod && result.customWodName && (
+                                    {(result.customWodName || result.customWodType) && (
                                       <span className="bg-slate-600 text-slate-300 text-xs px-2 py-0.5 rounded">
                                         Custom
                                       </span>
@@ -3456,7 +3777,7 @@ export default function CrossFitBoxApp() {
         {currentView === 'workout' && (
           <>
         {/* Today's WOD */}
-        {(todayWOD || editingWorkout) ? (
+        {((todayWOD || editingWorkout) && !isCustomWorkout) ? (
           <div className="bg-slate-800 rounded-lg p-6 mb-6 border border-slate-700">
             {editingWorkout && (
               <div className="bg-blue-600 text-white px-4 py-3 rounded-lg mb-4">
