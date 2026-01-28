@@ -60,6 +60,8 @@ export default function CrossFitBoxApp() {
   const [signupRole, setSignupRole] = useState('athlete');
   const [signupGroup, setSignupGroup] = useState('mens');
   const [showSignup, setShowSignup] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -278,6 +280,36 @@ export default function CrossFitBoxApp() {
       setAllAthleteResults([]);
     } catch (error) {
       console.error('Error logging out:', error);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    setAuthError('');
+    setAuthSuccess('');
+
+    if (!resetEmail) {
+      setAuthError('Please enter your email address');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(resetEmail)) {
+      setAuthError('Please enter a valid email address');
+      return;
+    }
+
+    setAuthLoading(true);
+
+    try {
+      await db.resetPassword(resetEmail);
+      setAuthSuccess('Password reset email sent! Check your inbox and follow the link to reset your password.');
+      setResetEmail('');
+    } catch (error) {
+      console.error('Password reset error:', error);
+      setAuthError(error.message || 'Error sending reset email. Please try again.');
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -780,7 +812,86 @@ export default function CrossFitBoxApp() {
             <p className="text-slate-400 text-base">Workout Logger</p>
           </div>
 
-          {!showSignup ? (
+          {showForgotPassword ? (
+            <>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mb-6">Reset Password</h2>
+
+              {/* Success Message */}
+              {authSuccess && (
+                <div className="bg-green-500/20 border border-green-500/50 rounded-xl p-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-green-400 text-sm">{authSuccess}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {authError && (
+                <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <svg className="w-5 h-5 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-red-400 text-sm">{authError}</p>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-slate-400 text-sm mb-6">
+                Enter your email address and we'll send you a link to reset your password.
+              </p>
+
+              <div className="space-y-8">
+                <div>
+                  <label className="block text-slate-400 text-sm font-medium mb-2.5">Email</label>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={resetEmail}
+                    onChange={(e) => {
+                      setResetEmail(e.target.value);
+                      setAuthError('');
+                    }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleForgotPassword()}
+                    className="w-full bg-slate-700/50 text-white text-base px-4 py-3.5 rounded-xl border border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleForgotPassword}
+                disabled={authLoading}
+                className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl mt-10 mb-6 transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-red-600/25"
+              >
+                {authLoading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Sending...
+                  </>
+                ) : 'Send Reset Link'}
+              </button>
+
+              <div className="text-center pt-2">
+                <button
+                  onClick={() => {
+                    setShowForgotPassword(false);
+                    setAuthError('');
+                    setAuthSuccess('');
+                    setResetEmail('');
+                  }}
+                  className="text-red-500 hover:text-red-400 text-sm font-semibold"
+                >
+                  Back to Login
+                </button>
+              </div>
+            </>
+          ) : !showSignup ? (
             <>
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-6">Login</h2>
 
@@ -824,7 +935,20 @@ export default function CrossFitBoxApp() {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 text-sm font-medium mb-2.5">Password</label>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <label className="block text-slate-400 text-sm font-medium">Password</label>
+                    <button
+                      onClick={() => {
+                        setShowForgotPassword(true);
+                        setAuthError('');
+                        setAuthSuccess('');
+                        setResetEmail(loginEmail);
+                      }}
+                      className="text-red-500 hover:text-red-400 text-sm"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <input
                     type="password"
                     placeholder="••••••••"
@@ -1348,17 +1472,24 @@ export default function CrossFitBoxApp() {
                                     onClick={() => editPastWorkout(result)}
                                     className="p-4 active:bg-slate-600 transition-colors cursor-pointer"
                                   >
-                                    {/* Header: WOD Name + Time */}
+                                    {/* Header: WOD Name + Type + Time */}
                                     <div className="flex items-start justify-between mb-2">
                                       <div className="flex-1">
-                                        {wod?.name ? (
-                                          <h4 className="text-white font-bold text-base">"{wod.name}"</h4>
-                                        ) : (
-                                          <h4 className="text-white font-medium text-base">Daily WOD</h4>
-                                        )}
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          {wod?.name ? (
+                                            <h4 className="text-white font-bold text-base">"{wod.name}"</h4>
+                                          ) : (
+                                            <h4 className="text-white font-medium text-base">Daily WOD</h4>
+                                          )}
+                                          {wod?.type && (
+                                            <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                              {wod.type}
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                       {result.time && (
-                                        <div className="bg-red-600 px-2 py-1 rounded">
+                                        <div className="bg-slate-700 px-2 py-1 rounded ml-2">
                                           <span className="text-white text-sm font-bold">{result.time}</span>
                                         </div>
                                       )}
@@ -1533,7 +1664,7 @@ export default function CrossFitBoxApp() {
 
                             {showDeleteConfirm !== result.id && (
                               <>
-                                <div 
+                                <div
                                   onClick={() => {
                                     editPastWorkout(result);
                                     setCoachView('workout');
@@ -1542,14 +1673,21 @@ export default function CrossFitBoxApp() {
                                 >
                                   <div className="flex items-start justify-between mb-2">
                                     <div className="flex-1">
-                                      {wod?.name ? (
-                                        <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
-                                      ) : (
-                                        <h4 className="text-white font-medium">Daily WOD</h4>
-                                      )}
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        {wod?.name ? (
+                                          <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
+                                        ) : (
+                                          <h4 className="text-white font-medium">Daily WOD</h4>
+                                        )}
+                                        {wod?.type && (
+                                          <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                            {wod.type}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                     {result.time && (
-                                      <div className="bg-red-600 px-3 py-1 rounded-lg">
+                                      <div className="bg-slate-700 px-3 py-1 rounded-lg ml-2">
                                         <span className="text-white font-bold text-sm">{result.time}</span>
                                       </div>
                                     )}
@@ -2303,14 +2441,21 @@ export default function CrossFitBoxApp() {
                                         key={workout.id}
                                         className="bg-slate-800 rounded-lg p-3 border border-slate-700"
                                       >
-                                        {/* WOD Name + Time Header */}
+                                        {/* WOD Name + Type + Time Header */}
                                         <div className="flex items-start justify-between mb-2">
                                           <div className="flex-1">
-                                            {wod?.name ? (
-                                              <h5 className="text-white font-bold text-sm mb-1">"{wod.name}"</h5>
-                                            ) : (
-                                              <h5 className="text-white font-medium text-sm mb-1">Daily WOD</h5>
-                                            )}
+                                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                                              {wod?.name ? (
+                                                <h5 className="text-white font-bold text-sm">"{wod.name}"</h5>
+                                              ) : (
+                                                <h5 className="text-white font-medium text-sm">Daily WOD</h5>
+                                              )}
+                                              {wod?.type && (
+                                                <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                                  {wod.type}
+                                                </span>
+                                              )}
+                                            </div>
                                             <div className="flex items-center gap-2">
                                               <Calendar className="w-3 h-3 text-red-500" />
                                               <span className="text-slate-400 text-xs">
@@ -2323,7 +2468,7 @@ export default function CrossFitBoxApp() {
                                             </div>
                                           </div>
                                           {workout.time && (
-                                            <div className="bg-red-600 px-2 py-1 rounded">
+                                            <div className="bg-slate-700 px-2 py-1 rounded ml-2">
                                               <span className="text-white text-xs font-bold">{workout.time}</span>
                                             </div>
                                           )}
@@ -2755,17 +2900,24 @@ export default function CrossFitBoxApp() {
                               onClick={() => editPastWorkout(result)}
                               className="p-5 active:bg-slate-700/50 transition-colors cursor-pointer"
                             >
-                              {/* Header: WOD Name */}
+                              {/* Header: WOD Name + Type */}
                               <div className="flex items-start justify-between mb-3">
                                 <div className="flex-1">
-                                  {wod?.name ? (
-                                    <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
-                                  ) : (
-                                    <h4 className="text-white font-medium">Daily WOD</h4>
-                                  )}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {wod?.name ? (
+                                      <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
+                                    ) : (
+                                      <h4 className="text-white font-medium">Daily WOD</h4>
+                                    )}
+                                    {wod?.type && (
+                                      <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                        {wod.type}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 {result.time && (
-                                  <div className="bg-red-600 px-3 py-1.5 rounded-lg">
+                                  <div className="bg-slate-700 px-3 py-1.5 rounded-lg ml-2">
                                     <span className="text-white font-bold text-sm">{result.time}</span>
                                   </div>
                                 )}
@@ -2961,21 +3113,28 @@ export default function CrossFitBoxApp() {
 
                         {showDeleteConfirm !== result.id && (
                           <>
-                            <div 
+                            <div
                               onClick={() => editPastWorkout(result)}
                               className="p-4 active:bg-slate-700 transition-colors cursor-pointer"
                             >
-                              {/* Header: WOD Name */}
+                              {/* Header: WOD Name + Type */}
                               <div className="flex items-start justify-between mb-2">
                                 <div className="flex-1">
-                                  {wod?.name ? (
-                                    <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
-                                  ) : (
-                                    <h4 className="text-white font-medium">Daily WOD</h4>
-                                  )}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {wod?.name ? (
+                                      <h4 className="text-white font-bold text-lg">"{wod.name}"</h4>
+                                    ) : (
+                                      <h4 className="text-white font-medium">Daily WOD</h4>
+                                    )}
+                                    {wod?.type && (
+                                      <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                        {wod.type}
+                                      </span>
+                                    )}
+                                  </div>
                                 </div>
                                 {result.time && (
-                                  <div className="bg-red-600 px-3 py-1 rounded-lg">
+                                  <div className="bg-slate-700 px-3 py-1 rounded-lg ml-2">
                                     <span className="text-white font-bold text-sm">{result.time}</span>
                                   </div>
                                 )}
