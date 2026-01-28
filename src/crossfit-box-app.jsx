@@ -1,51 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Dumbbell, Clock, Calendar, Users, Image, LogOut, UserCircle } from 'lucide-react';
-
-// Storage utility wrapper for localStorage (replaces storage)
-const storage = {
-  async get(key) {
-    try {
-      const value = localStorage.getItem(key);
-      return value ? { value } : null;
-    } catch (error) {
-      console.error('Storage get error:', error);
-      return null;
-    }
-  },
-  async set(key, value) {
-    try {
-      localStorage.setItem(key, value);
-      return true;
-    } catch (error) {
-      console.error('Storage set error:', error);
-      return false;
-    }
-  },
-  async delete(key) {
-    try {
-      localStorage.removeItem(key);
-      return true;
-    } catch (error) {
-      console.error('Storage delete error:', error);
-      return false;
-    }
-  },
-  async list(prefix) {
-    try {
-      const keys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(prefix)) {
-          keys.push(key);
-        }
-      }
-      return keys;
-    } catch (error) {
-      console.error('Storage list error:', error);
-      return [];
-    }
-  }
-};
+import { supabase, clearSupabaseStorage } from './lib/supabase';
+import * as db from './lib/database';
 
 // Standard CrossFit movements list
 const STANDARD_MOVEMENTS = [
@@ -105,6 +61,7 @@ export default function CrossFitBoxApp() {
   const [signupGroup, setSignupGroup] = useState('mens');
   const [showSignup, setShowSignup] = useState(false);
   const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   
   // Coach state
@@ -136,41 +93,85 @@ export default function CrossFitBoxApp() {
   });
   const [workoutResults, setWorkoutResults] = useState([]); // Current user's results
   const [allAthleteResults, setAllAthleteResults] = useState([]); // All results (for coaches)
+  const [missedWODs, setMissedWODs] = useState([]); // WODs from past days user hasn't logged
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'workout', or 'history'
   const [editingWorkout, setEditingWorkout] = useState(null); // For editing past workouts
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [historySearch, setHistorySearch] = useState('');
   const [coachHistorySearch, setCoachHistorySearch] = useState('');
+  const [photoModalUrl, setPhotoModalUrl] = useState(null); // For viewing photos in full screen
 
+  // Initialize auth state listener
   useEffect(() => {
-    loadCurrentUser();
+    let mounted = true;
+
+    // Helper to load profile with timeout
+    const loadProfile = async (userId) => {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile load timeout')), 10000)
+      );
+      const profile = await Promise.race([db.getProfile(userId), timeoutPromise]);
+      return db.profileToUser(profile);
+    };
+
+    // Check for existing session
+    const initAuth = async () => {
+      try {
+        const session = await db.getCurrentSession();
+        if (session?.user && mounted) {
+          const user = await loadProfile(session.user.id);
+          if (mounted) setCurrentUser(user);
+        }
+      } catch (error) {
+        console.log('No user logged in or session expired:', error.message);
+        // Clear any stale session
+        await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      }
+    };
+    initAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
+        try {
+          const user = await loadProfile(session.user.id);
+          if (mounted) setCurrentUser(user);
+        } catch (error) {
+          console.error('Error loading profile:', error);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        if (mounted) setCurrentUser(null);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
-    if (currentUser) {
-      loadTodayWOD();
-      loadMyResults();
+    const loadData = async () => {
+      if (!currentUser) return;
+
+      // Load WOD first, then results (to avoid race condition)
+      const wod = await loadTodayWOD();
+      const results = await loadMyResults(wod);
+
+      // Load missed WODs (WODs from past days user hasn't logged)
+      await loadMissedWODs(results);
+
       if (currentUser.role === 'coach') {
         loadAllResults();
         loadAllWODs();
       }
-    }
+    };
+    loadData();
   }, [currentUser]);
-
-  const loadCurrentUser = async () => {
-    try {
-      const result = await storage.get('current_user');
-      if (result) {
-        setCurrentUser(JSON.parse(result.value));
-      }
-    } catch (error) {
-      console.log('No user logged in');
-    }
-  };
 
   const handleSignup = async () => {
     setAuthError('');
-    
+
     // Validate all fields
     if (!signupEmail || !signupPassword || !signupName || !signupConfirmPassword) {
       setAuthError('Please fill in all fields');
@@ -199,29 +200,10 @@ export default function CrossFitBoxApp() {
     setAuthLoading(true);
 
     try {
-      // Check if email already exists
-      const existingUser = await storage.get(`user:${signupEmail.toLowerCase()}`, true);
-      if (existingUser) {
-        setAuthError('An account with this email already exists');
-        setAuthLoading(false);
-        return;
-      }
-
-      const user = {
-        email: signupEmail.toLowerCase(),
-        password: signupPassword,
-        name: signupName.trim(),
-        role: signupRole,
-        group: signupGroup,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-
-      // Save user
-      await storage.set(`user:${signupEmail.toLowerCase()}`, JSON.stringify(user), true);
-      await storage.set('current_user', JSON.stringify(user));
-      setCurrentUser(user);
+      await db.signUp(signupEmail, signupPassword, signupName, signupRole, signupGroup);
+      // Show success message and switch to login view
       setShowSignup(false);
+      setAuthSuccess('Account created! Check your email and click the confirmation link to activate your account.');
       // Clear form
       setSignupEmail('');
       setSignupPassword('');
@@ -229,7 +211,12 @@ export default function CrossFitBoxApp() {
       setSignupName('');
       setAuthError('');
     } catch (error) {
-      setAuthError('Error creating account. Please try again.');
+      console.error('Signup error:', error);
+      if (error.message?.includes('already registered')) {
+        setAuthError('An account with this email already exists');
+      } else {
+        setAuthError(error.message || 'Error creating account. Please try again.');
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -237,7 +224,8 @@ export default function CrossFitBoxApp() {
 
   const handleLogin = async () => {
     setAuthError('');
-    
+    setAuthSuccess('');
+
     if (!loginEmail || !loginPassword) {
       setAuthError('Please enter email and password');
       return;
@@ -246,23 +234,32 @@ export default function CrossFitBoxApp() {
     setAuthLoading(true);
 
     try {
-      const result = await storage.get(`user:${loginEmail.toLowerCase()}`, true);
-      if (result) {
-        const user = JSON.parse(result.value);
-        if (user.password === loginPassword) {
-          await storage.set('current_user', JSON.stringify(user));
-          setCurrentUser(user);
-          setLoginEmail('');
-          setLoginPassword('');
-          setAuthError('');
-        } else {
-          setAuthError('Incorrect password. Please try again.');
-        }
-      } else {
-        setAuthError('No account found with this email. Please sign up.');
-      }
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Login timed out. Please try again.')), 15000)
+      );
+      await Promise.race([db.signIn(loginEmail, loginPassword), timeoutPromise]);
+      // Auth state listener will handle setting currentUser
+      setLoginEmail('');
+      setLoginPassword('');
+      setAuthError('');
     } catch (error) {
-      setAuthError('No account found with this email. Please sign up.');
+      console.error('Login error:', error);
+
+      // Clear corrupted session data on timeout or unexpected errors
+      if (error.message?.includes('timed out') || error.message?.includes('406') || error.message?.includes('coerce')) {
+        clearSupabaseStorage();
+      }
+
+      if (error.message?.includes('Invalid login')) {
+        setAuthError('Incorrect email or password. Please try again.');
+      } else if (error.message?.includes('Email not confirmed')) {
+        setAuthError('Please confirm your email address before logging in. Check your inbox for the confirmation link.');
+      } else if (error.message?.includes('timed out')) {
+        setAuthError('Login timed out. Session cleared - please try again.');
+      } else {
+        setAuthError(error.message || 'Error logging in. Please try again.');
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -270,10 +267,15 @@ export default function CrossFitBoxApp() {
 
   const handleLogout = async () => {
     try {
-      await storage.delete('current_user');
+      await db.signOut();
       setCurrentUser(null);
       setLoginEmail('');
       setLoginPassword('');
+      // Reset state
+      setAllWODs([]);
+      setTodayWOD(null);
+      setWorkoutResults([]);
+      setAllAthleteResults([]);
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -349,53 +351,20 @@ export default function CrossFitBoxApp() {
       return;
     }
 
-    const wodToPost = {
-      ...newWOD,
-      id: editingWOD?.id || Date.now().toString(),
-      postedBy: currentUser.name,
-      postedAt: editingWOD?.postedAt || new Date().toISOString()
-    };
-
-    // Validate no conflicting WODs for the same date
-    // Rules:
-    // - Only one WOD per day for each group (mens, womens, or combined)
-    // - If combined exists, can't post mens or womens (and vice versa)
     try {
-      const date = wodToPost.date;
-      const group = wodToPost.group;
-
-      // Check for conflicts (skip if editing the same WOD)
-      if (group === 'combined') {
-        // Check if mens or womens WOD already exists
-        const mensWOD = await storage.get(`wod:${date}:mens`);
-        const womensWOD = await storage.get(`wod:${date}:womens`);
-
-        if (mensWOD || womensWOD) {
-          const existing = mensWOD ? "Men's" : "Women's";
-          alert(`Cannot post a Combined WOD - a ${existing} WOD already exists for ${date}. Delete it first or post a group-specific WOD.`);
-          return;
-        }
-      } else {
-        // Posting mens or womens - check if combined exists
-        const combinedWOD = await storage.get(`wod:${date}:combined`);
-
-        if (combinedWOD) {
-          alert(`Cannot post a ${group === 'mens' ? "Men's" : "Women's"} WOD - a Combined WOD already exists for ${date}. Delete it first or edit the existing WOD.`);
-          return;
-        }
-
-        // Check if same group WOD already exists (unless editing)
-        const existingGroupWOD = await storage.get(`wod:${date}:${group}`);
-        if (existingGroupWOD && !editingWOD) {
-          const existingData = JSON.parse(existingGroupWOD.value);
-          if (existingData.id !== wodToPost.id) {
-            alert(`A ${group === 'mens' ? "Men's" : "Women's"} WOD already exists for ${date}. Edit or delete it instead.`);
-            return;
-          }
-        }
+      // Check for conflicts
+      const conflictCheck = await db.checkWodConflict(newWOD.date, newWOD.group, editingWOD?.id);
+      if (conflictCheck.conflict) {
+        alert(conflictCheck.message);
+        return;
       }
 
-      await storage.set(`wod:${wodToPost.date}:${wodToPost.group}`, JSON.stringify(wodToPost));
+      if (editingWOD) {
+        await db.updateWod(editingWOD.id, newWOD);
+      } else {
+        await db.createWod(newWOD, currentUser.id, currentUser.name);
+      }
+
       const action = editingWOD ? 'updated' : 'posted';
       alert(`WOD ${action} successfully!`);
       setShowWODForm(false);
@@ -419,32 +388,22 @@ export default function CrossFitBoxApp() {
 
   // Athlete functions
   const loadTodayWOD = async () => {
-    if (!currentUser) return;
+    if (!currentUser) return null;
 
-    const today = new Date().toISOString().split('T')[0];
     try {
-      // Try combined first (applies to all athletes)
-      let result = await storage.get(`wod:${today}:combined`);
-      if (!result && currentUser.group) {
-        // Try user's specific group (mens or womens)
-        result = await storage.get(`wod:${today}:${currentUser.group}`);
-      }
-      
-      if (result) {
-        const wod = JSON.parse(result.value);
+      const wodData = await db.getTodayWod(currentUser.group);
+      if (wodData) {
+        const wod = db.wodToAppFormat(wodData);
         setTodayWOD(wod);
-        setMyResult({
-          time: '',
-          movements: wod.movements.map(m => ({ ...m, weight: '' })),
-          notes: '',
-          photoData: null
-        });
+        return wod; // Return the WOD so caller can use it
       } else {
         setTodayWOD(null);
+        return null;
       }
-    } catch (error) {
+    } catch {
       console.log('No WOD posted for today');
       setTodayWOD(null);
+      return null;
     }
   };
 
@@ -463,78 +422,85 @@ export default function CrossFitBoxApp() {
     if (!todayWOD && !editingWorkout) return;
 
     const workoutDate = editingWorkout ? editingWorkout.date : todayWOD.date;
-    
-    // Use existing result ID if editing, or create date-based ID for new entry
-    // This ensures one result per date per user
-    const resultId = myResult.existingResultId || `${currentUser.email}:${workoutDate}`;
-    
-    const result = {
-      wodId: editingWorkout?.id || todayWOD?.id,
+
+    const resultData = {
+      wodId: editingWorkout?.wodId || todayWOD?.id,
       date: workoutDate,
-      athleteName: currentUser.name,
-      athleteEmail: currentUser.email,
       time: myResult.time,
       movements: myResult.movements,
       notes: myResult.notes,
       photoData: myResult.photoData,
-      loggedAt: new Date().toISOString(),
-      id: resultId
     };
 
     try {
-      await storage.set(`result:${resultId}`, JSON.stringify(result), true);
-      const action = myResult.existingResultId ? 'updated' : 'logged';
-      alert(`Workout ${action}! Great job! 💪`);
-      await loadMyResults();
+      if (myResult.existingResultId) {
+        // Update existing result
+        await db.updateResult(myResult.existingResultId, resultData);
+        alert('Workout updated! Great job!');
+      } else {
+        // Create new result
+        await db.createResult(resultData, currentUser.id, currentUser.name, currentUser.email);
+        alert('Workout logged! Great job!');
+      }
+
+      const results = await loadMyResults();
+      await loadMissedWODs(results); // Refresh missed WODs list
+
       if (currentUser.role === 'coach') {
         await loadAllResults();
+      }
+
+      // If logging a missed WOD, go back to dashboard
+      if (editingWorkout) {
+        setEditingWorkout(null);
+        setCurrentView('dashboard');
+        if (currentUser.role === 'coach') {
+          setCoachView('dashboard');
+        }
       }
     } catch (error) {
       alert('Error logging workout: ' + error.message);
     }
   };
 
-  const loadMyResults = async () => {
+  const loadMyResults = async (wod = null) => {
+    if (!currentUser) return [];
+
+    // Use passed WOD or fall back to state
+    const currentWOD = wod || todayWOD;
+
     try {
-      const keys = await storage.list('result:');
-      if (keys && keys.length > 0) {
-        const allResults = await Promise.all(
-          keys.map(async (key) => {
-            const data = await storage.get(key);
-            return data ? JSON.parse(data.value) : null;
-          })
-        );
-        const myResults = allResults
-          .filter(r => r && r.athleteEmail === currentUser.email)
-          .sort((a, b) => new Date(b.loggedAt) - new Date(a.loggedAt));
-        setWorkoutResults(myResults);
-        
-        // Check if already logged today's workout BY DATE, not by WOD ID
-        const today = new Date().toISOString().split('T')[0];
-        const todayResult = myResults.find(r => r.date === today);
-        
-        if (todayResult && todayWOD) {
-          // User has already logged today - preserve their existing data
-          // Even if coach edited the WOD, keep the athlete's logged movements
-          setMyResult({
-            time: todayResult.time,
-            movements: todayResult.movements, // Keep their logged movements, not the WOD template
-            notes: todayResult.notes,
-            photoData: todayResult.photoData,
-            existingResultId: todayResult.id
-          });
-        } else if (todayWOD && !todayResult) {
-          // No result for today yet - initialize with WOD template
-          setMyResult({
-            time: '',
-            movements: todayWOD.movements.map(m => ({ ...m, weight: '' })),
-            notes: '',
-            photoData: null
-          });
-        }
+      const resultsData = await db.getResultsByAthlete(currentUser.id);
+      const myResults = resultsData.map(r => db.resultToAppFormat(r));
+      setWorkoutResults(myResults);
+
+      // Check if already logged today's workout BY DATE, not by WOD ID
+      const today = new Date().toISOString().split('T')[0];
+      const todayResult = myResults.find(r => r.date === today);
+
+      if (todayResult) {
+        // User has already logged today - preserve their existing data
+        setMyResult({
+          time: todayResult.time,
+          movements: todayResult.movements,
+          notes: todayResult.notes,
+          photoData: todayResult.photoData,
+          existingResultId: todayResult.id
+        });
+      } else if (currentWOD) {
+        // No result for today yet - initialize with WOD template
+        setMyResult({
+          time: '',
+          movements: currentWOD.movements.map(m => ({ ...m, weight: '' })),
+          notes: '',
+          photoData: null
+        });
       }
+
+      return myResults; // Return results for use by caller
     } catch (error) {
-      console.log('No results yet');
+      console.log('No results yet', error);
+      return [];
     }
   };
 
@@ -542,20 +508,9 @@ export default function CrossFitBoxApp() {
     if (currentUser?.role !== 'coach') return;
 
     try {
-      const keys = await storage.list('result:');
-      if (keys && keys.length > 0) {
-        const allResults = await Promise.all(
-          keys.map(async (key) => {
-            const data = await storage.get(key);
-            return data ? JSON.parse(data.value) : null;
-          })
-        );
-        setAllAthleteResults(allResults.filter(r => r).sort((a, b) =>
-          new Date(b.loggedAt) - new Date(a.loggedAt)
-        ));
-      } else {
-        setAllAthleteResults([]);
-      }
+      const resultsData = await db.getAllResults();
+      const allResults = resultsData.map(r => db.resultToAppFormat(r));
+      setAllAthleteResults(allResults);
     } catch (error) {
       console.log('Error loading results:', error);
       setAllAthleteResults([]);
@@ -564,23 +519,52 @@ export default function CrossFitBoxApp() {
 
   const loadAllWODs = async () => {
     try {
-      const keys = await storage.list('wod:');
-      if (keys && keys.length > 0) {
-        const wods = await Promise.all(
-          keys.map(async (key) => {
-            const data = await storage.get(key);
-            return data ? JSON.parse(data.value) : null;
-          })
-        );
-        setAllWODs(wods.filter(w => w).sort((a, b) =>
-          new Date(b.date) - new Date(a.date)
-        ));
-      } else {
-        setAllWODs([]);
-      }
+      const wodsData = await db.getAllWods();
+      const wods = wodsData.map(w => db.wodToAppFormat(w));
+      setAllWODs(wods);
     } catch (error) {
       console.log('Error loading WODs:', error);
       setAllWODs([]);
+    }
+  };
+
+  const loadMissedWODs = async (userResults = null) => {
+    if (!currentUser) return;
+
+    try {
+      // Get recent WODs (past 7 days, excluding today)
+      const recentWodsData = await db.getRecentWods(currentUser.group, 7);
+      const recentWods = recentWodsData.map(w => db.wodToAppFormat(w));
+
+      // Get user's results to filter out already logged WODs
+      const results = userResults || workoutResults;
+      const loggedDates = new Set(results.map(r => r.date));
+
+      // Filter to only WODs the user hasn't logged
+      const missed = recentWods.filter(wod => !loggedDates.has(wod.date));
+      setMissedWODs(missed);
+    } catch (error) {
+      console.log('Error loading missed WODs:', error);
+      setMissedWODs([]);
+    }
+  };
+
+  const startLogMissedWOD = (wod) => {
+    // Set up the workout for logging
+    setEditingWorkout({
+      ...wod,
+      movements: wod.movements
+    });
+    setMyResult({
+      time: '',
+      movements: wod.movements.map(m => ({ ...m, weight: '' })),
+      notes: '',
+      photoData: null
+    });
+    setCurrentView('workout');
+    // Also update coach view if applicable
+    if (currentUser.role === 'coach') {
+      setCoachView('workout');
     }
   };
 
@@ -617,29 +601,29 @@ export default function CrossFitBoxApp() {
 
   const confirmDeleteWOD = async () => {
     if (!showDeleteWODConfirm) return;
-    
+
     const wod = showDeleteWODConfirm;
-    
+
     // Check if coach has logged their own result
-    const coachResult = workoutResults.find(r => 
+    const coachResult = workoutResults.find(r =>
       r.date === wod.date && r.athleteEmail === currentUser.email
     );
-    
+
     try {
       // Delete coach's result if exists
       if (coachResult) {
-        await storage.delete(`result:${coachResult.id}`, true);
+        await db.deleteResult(coachResult.id);
       }
-      
+
       // Delete the WOD
-      await storage.delete(`wod:${wod.date}:${wod.group}`, true);
-      
+      await db.deleteWod(wod.id);
+
       // Refresh data
       await loadAllWODs();
       await loadTodayWOD();
       await loadMyResults();
       await loadAllResults();
-      
+
       setShowDeleteWODConfirm(null);
       alert('WOD deleted successfully');
     } catch (error) {
@@ -721,7 +705,7 @@ export default function CrossFitBoxApp() {
 
   const deleteWorkout = async (workoutId) => {
     try {
-      await storage.delete(`result:${workoutId}`, true);
+      await db.deleteResult(workoutId);
       await loadMyResults();
       if (currentUser.role === 'coach') {
         await loadAllResults();
@@ -758,6 +742,33 @@ export default function CrossFitBoxApp() {
     setCurrentView('dashboard');
   };
 
+  // Photo Modal Component
+  const PhotoModal = () => {
+    if (!photoModalUrl) return null;
+
+    return (
+      <div
+        className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+        onClick={() => setPhotoModalUrl(null)}
+      >
+        <button
+          onClick={() => setPhotoModalUrl(null)}
+          className="absolute top-4 right-4 text-white/80 hover:text-white p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+        >
+          <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <img
+          src={photoModalUrl}
+          alt="Workout photo"
+          className="max-w-full max-h-full object-contain rounded-lg"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+    );
+  };
+
   // Login/Signup Screen
   if (!currentUser) {
     return (
@@ -765,13 +776,25 @@ export default function CrossFitBoxApp() {
         <div className="max-w-md w-full bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 sm:p-8 md:p-10 border border-slate-700/50 shadow-2xl">
           <div className="text-center mb-10">
             <BBoxLogo className="w-28 h-14 mx-auto mb-4" />
-            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">BBOX CrossFit</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">CrossFit</h1>
             <p className="text-slate-400 text-base">Workout Logger</p>
           </div>
 
           {!showSignup ? (
             <>
               <h2 className="text-xl sm:text-2xl font-bold text-white mb-6">Login</h2>
+
+              {/* Success Message */}
+              {authSuccess && (
+                <div className="bg-green-500/20 border border-green-500/50 rounded-xl p-4 mb-6">
+                  <div className="flex items-center gap-3">
+                    <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-green-400 text-sm">{authSuccess}</p>
+                  </div>
+                </div>
+              )}
 
               {/* Error Message */}
               {authError && (
@@ -795,6 +818,7 @@ export default function CrossFitBoxApp() {
                     onChange={(e) => {
                       setLoginEmail(e.target.value);
                       setAuthError('');
+                      setAuthSuccess('');
                     }}
                     className="w-full bg-slate-700/50 text-white text-base px-4 py-3.5 rounded-xl border border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all"
                   />
@@ -808,6 +832,7 @@ export default function CrossFitBoxApp() {
                     onChange={(e) => {
                       setLoginPassword(e.target.value);
                       setAuthError('');
+                      setAuthSuccess('');
                     }}
                     onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                     className="w-full bg-slate-700/50 text-white text-base px-4 py-3.5 rounded-xl border border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all"
@@ -818,7 +843,7 @@ export default function CrossFitBoxApp() {
               <button
                 onClick={handleLogin}
                 disabled={authLoading}
-                className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl mt-8 mb-6 transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-red-600/25"
+                className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl mt-10 mb-6 transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-red-600/25"
               >
                 {authLoading ? (
                   <>
@@ -837,6 +862,7 @@ export default function CrossFitBoxApp() {
                   onClick={() => {
                     setShowSignup(true);
                     setAuthError('');
+                    setAuthSuccess('');
                   }}
                   className="text-red-500 hover:text-red-400 text-sm font-semibold ml-1"
                 >
@@ -957,7 +983,7 @@ export default function CrossFitBoxApp() {
               <button
                 onClick={handleSignup}
                 disabled={authLoading}
-                className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl mt-8 mb-6 transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-red-600/25"
+                className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl mt-10 mb-6 transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-red-600/25"
               >
                 {authLoading ? (
                   <>
@@ -1192,6 +1218,59 @@ export default function CrossFitBoxApp() {
                       <Plus className="w-5 h-5" />
                       Post Today's WOD
                     </button>
+                  </div>
+                )}
+
+                {/* Missed WODs Section - Coach Dashboard */}
+                {missedWODs.length > 0 && (
+                  <div className="bg-slate-800/80 backdrop-blur-sm rounded-xl p-5 mb-6 border border-amber-500/30">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="bg-amber-500/20 p-2 rounded-lg">
+                        <Clock className="w-5 h-5 text-amber-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-white">Missed Workouts</h3>
+                        <p className="text-slate-400 text-sm">Log results for previous days</p>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {missedWODs.map((wod) => (
+                        <div
+                          key={wod.id}
+                          className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/50 hover:border-amber-500/50 transition-all"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <span className="text-amber-400 text-sm font-medium">
+                                  {new Date(wod.date + 'T00:00:00').toLocaleDateString('en-US', {
+                                    weekday: 'short',
+                                    month: 'short',
+                                    day: 'numeric'
+                                  })}
+                                </span>
+                                <span className="bg-red-600/80 text-white text-xs px-2 py-0.5 rounded">
+                                  {wod.type}
+                                </span>
+                              </div>
+                              <div className="text-white font-medium mb-1">
+                                {wod.name || `${wod.type} Workout`}
+                              </div>
+                              <div className="text-slate-400 text-sm">
+                                {wod.movements.length} movement{wod.movements.length !== 1 ? 's' : ''} • {wod.movements.slice(0, 2).map(m => m.name).join(', ')}{wod.movements.length > 2 ? '...' : ''}
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => startLogMissedWOD(wod)}
+                              className="ml-3 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 flex-shrink-0"
+                            >
+                              <Plus className="w-4 h-4" />
+                              Log
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -1511,8 +1590,11 @@ export default function CrossFitBoxApp() {
                                   </div>
 
                                   {result.photoData && (
-                                    <div className="mt-3 -mx-4 -mb-4">
-                                      <img src={result.photoData} alt="Workout" className="w-full h-32 object-cover" />
+                                    <div
+                                      className="mt-3 -mx-4 -mb-4 cursor-pointer"
+                                      onClick={() => setPhotoModalUrl(result.photoData)}
+                                    >
+                                      <img src={result.photoData} alt="Workout" className="w-full h-32 object-cover hover:opacity-90 transition-opacity" />
                                     </div>
                                   )}
                                 </div>
@@ -1657,7 +1739,12 @@ export default function CrossFitBoxApp() {
                       </div>
                       {myResult.photoData && (
                         <div className="relative">
-                          <img src={myResult.photoData} alt="Preview" className="w-full rounded-lg max-h-64 object-cover" />
+                          <img
+                            src={myResult.photoData}
+                            alt="Preview"
+                            className="w-full rounded-lg max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => setPhotoModalUrl(myResult.photoData)}
+                          />
                           <button
                             onClick={() => setMyResult({ ...myResult, photoData: null })}
                             className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"
@@ -2257,10 +2344,11 @@ export default function CrossFitBoxApp() {
 
                                         {/* Photo thumbnail */}
                                         {workout.photoData && (
-                                          <img 
-                                            src={workout.photoData} 
-                                            alt="Workout" 
-                                            className="w-full rounded h-32 object-cover mb-2"
+                                          <img
+                                            src={workout.photoData}
+                                            alt="Workout"
+                                            className="w-full rounded h-32 object-cover mb-2 cursor-pointer hover:opacity-90 transition-opacity"
+                                            onClick={() => setPhotoModalUrl(workout.photoData)}
                                           />
                                         )}
 
@@ -2339,6 +2427,9 @@ export default function CrossFitBoxApp() {
             </div>
           </div>
         </div>
+
+        {/* Photo Modal */}
+        <PhotoModal />
       </div>
     );
   }
@@ -2533,6 +2624,59 @@ export default function CrossFitBoxApp() {
               </div>
             )}
 
+            {/* Missed WODs Section */}
+            {missedWODs.length > 0 && (
+              <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 sm:p-6 mb-6 border border-amber-500/30">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-amber-500/20 p-2 rounded-lg">
+                    <Clock className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-white">Missed Workouts</h3>
+                    <p className="text-slate-400 text-sm">Log results for previous days</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  {missedWODs.map((wod) => (
+                    <div
+                      key={wod.id}
+                      className="bg-slate-700/50 rounded-xl p-4 border border-slate-600/50 hover:border-amber-500/50 transition-all"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
+                            <span className="text-amber-400 text-sm font-medium">
+                              {new Date(wod.date + 'T00:00:00').toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
+                            </span>
+                            <span className="bg-red-600/80 text-white text-xs px-2 py-0.5 rounded">
+                              {wod.type}
+                            </span>
+                          </div>
+                          <div className="text-white font-medium mb-1">
+                            {wod.name || `${wod.type} Workout`}
+                          </div>
+                          <div className="text-slate-400 text-sm">
+                            {wod.movements.length} movement{wod.movements.length !== 1 ? 's' : ''} • {wod.movements.slice(0, 2).map(m => m.name).join(', ')}{wod.movements.length > 2 ? '...' : ''}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => startLogMissedWOD(wod)}
+                          className="ml-3 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 flex-shrink-0"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Log
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Top Movements */}
             {calculateStats().topMovements.length > 0 && (
               <div className="bg-slate-800 rounded-2xl p-5 sm:p-6 mb-6 border border-slate-700">
@@ -2674,11 +2818,14 @@ export default function CrossFitBoxApp() {
                               </div>
 
                               {result.photoData && (
-                                <div className="mt-3 -mx-4 -mb-4">
-                                  <img 
-                                    src={result.photoData} 
-                                    alt="Workout" 
-                                    className="w-full h-32 object-cover"
+                                <div
+                                  className="mt-3 -mx-4 -mb-4 cursor-pointer"
+                                  onClick={() => setPhotoModalUrl(result.photoData)}
+                                >
+                                  <img
+                                    src={result.photoData}
+                                    alt="Workout"
+                                    className="w-full h-32 object-cover hover:opacity-90 transition-opacity"
                                   />
                                 </div>
                               )}
@@ -2885,11 +3032,14 @@ export default function CrossFitBoxApp() {
                               )}
 
                               {result.photoData && (
-                                <div className="mt-3 -mx-4 -mb-4">
-                                  <img 
-                                    src={result.photoData} 
-                                    alt="Workout" 
-                                    className="w-full h-32 object-cover"
+                                <div
+                                  className="mt-3 -mx-4 -mb-4 cursor-pointer"
+                                  onClick={() => setPhotoModalUrl(result.photoData)}
+                                >
+                                  <img
+                                    src={result.photoData}
+                                    alt="Workout"
+                                    className="w-full h-32 object-cover hover:opacity-90 transition-opacity"
                                   />
                                 </div>
                               )}
@@ -3062,7 +3212,12 @@ export default function CrossFitBoxApp() {
               </div>
               {myResult.photoData && (
                 <div className="relative">
-                  <img src={myResult.photoData} alt="Preview" className="w-full rounded-lg max-h-64 object-cover" />
+                  <img
+                    src={myResult.photoData}
+                    alt="Preview"
+                    className="w-full rounded-lg max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => setPhotoModalUrl(myResult.photoData)}
+                  />
                   <button
                     onClick={() => setMyResult({ ...myResult, photoData: null })}
                     className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"
@@ -3110,6 +3265,9 @@ export default function CrossFitBoxApp() {
         )}
         </div>
       </div>
+
+      {/* Photo Modal */}
+      <PhotoModal />
     </div>
   );
 }
