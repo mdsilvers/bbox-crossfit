@@ -1,6 +1,74 @@
 @import "tailwindcss";
 
 /* ============================================
+   Muted Sophistication Color Palette
+   Overrides Tailwind's default color tokens
+   ============================================ */
+@theme {
+  /* White - Primary text (off-white) */
+  --color-white: #f0f1f3;
+
+  /* Slate - Backgrounds, borders, muted text */
+  --color-slate-900: #1c2027;
+  --color-slate-800: #272c38;
+  --color-slate-700: #3d4452;
+  --color-slate-600: #505664;
+  --color-slate-500: #636977;
+  --color-slate-400: #a0a5ae;
+  --color-slate-300: #c0c3c9;
+
+  /* Red - Primary accent */
+  --color-red-100: #eedcdc;
+  --color-red-200: #dbb5b5;
+  --color-red-300: #d88a8a;
+  --color-red-400: #d17272;
+  --color-red-500: #c95f5f;
+  --color-red-600: #b54e4e;
+  --color-red-700: #9e4141;
+  --color-red-800: #853636;
+
+  /* Blue - Stat cards, edit links */
+  --color-blue-100: #dce6f2;
+  --color-blue-200: #b5cce3;
+  --color-blue-400: #7da3d4;
+  --color-blue-500: #5a8ac9;
+  --color-blue-600: #4c78b5;
+
+  /* Orange - Stat cards */
+  --color-orange-100: #f0e0cc;
+  --color-orange-200: #dfbf99;
+  --color-orange-500: #cf8a52;
+  --color-orange-600: #b87845;
+
+  /* Purple - Stat cards */
+  --color-purple-100: #e4dced;
+  --color-purple-200: #c9b3d6;
+  --color-purple-500: #9a73b5;
+  --color-purple-600: #8862a3;
+
+  /* Violet - Custom WOD badges */
+  --color-violet-500: #8b7ab8;
+  --color-violet-600: #7a69a6;
+  --color-violet-700: #695a94;
+
+  /* Green - Success states */
+  --color-green-100: #d5eadc;
+  --color-green-400: #72b88a;
+  --color-green-500: #5fa877;
+  --color-green-600: #509368;
+
+  /* Yellow - Benchmark badges, warnings */
+  --color-yellow-400: #d4ba6a;
+  --color-yellow-500: #c9a84e;
+  --color-yellow-600: #b5963f;
+
+  /* Amber - Missed workout indicators */
+  --color-amber-400: #d4a558;
+  --color-amber-500: #c99652;
+  --color-amber-600: #b58545;
+}
+
+/* ============================================
    Explicit Tailwind utilities for v4 compatibility
    These override/supplement Tailwind's generated utilities
    ============================================ */
@@ -188,7 +256,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #0f172a;
+  background-color: #161a20;
   min-height: 100vh;
   min-height: 100dvh;
 }
@@ -228,7 +296,7 @@ input:focus-visible,
 button:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #ef4444;
+  outline: 2px solid #c95f5f;
   outline-offset: 2px;
 }
 
