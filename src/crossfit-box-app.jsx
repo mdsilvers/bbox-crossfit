@@ -678,8 +678,10 @@ export default function CrossFitBoxApp() {
 
   const startLogMissedWOD = (wod) => {
     // Set up the workout for logging
+    // Include wodId so logResult stores the correct WOD reference
     setEditingWorkout({
       ...wod,
+      wodId: wod.id,
       movements: wod.movements
     });
     setMyResult({
