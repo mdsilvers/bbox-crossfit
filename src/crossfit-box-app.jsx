@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Dumbbell, Clock, Calendar, Users, Image, LogOut, UserCircle } from 'lucide-react';
+import { Plus, Trash2, Dumbbell, Clock, Calendar, Users, Image, LogOut, UserCircle, Trophy } from 'lucide-react';
 import { supabase, clearSupabaseStorage } from './lib/supabase';
 import * as db from './lib/database';
+import { getBenchmarksByCategory, getBenchmarkByName, isBenchmarkWod, ALL_BENCHMARKS } from './lib/benchmarks';
+import { formatScore, getScoreLabel, compareScores, getScoreCategory } from './lib/score-utils';
+import ScoreInput from './components/ScoreInput';
 
 // Standard CrossFit movements list
 const STANDARD_MOVEMENTS = [
@@ -112,6 +115,10 @@ export default function CrossFitBoxApp() {
   });
   const [customMovementInput, setCustomMovementInput] = useState(['']);
   const [showCustomMovementDropdown, setShowCustomMovementDropdown] = useState([false]);
+  const [customWodNameError, setCustomWodNameError] = useState(''); // For benchmark name validation
+
+  // Benchmark PR state
+  const [benchmarkPRs, setBenchmarkPRs] = useState([]);
 
   // Initialize auth state listener
   useEffect(() => {
@@ -173,9 +180,17 @@ export default function CrossFitBoxApp() {
       // Load missed WODs (WODs from past days user hasn't logged)
       await loadMissedWODs(results);
 
+      // Load all WODs for PR calculation and history display (needed for both athletes and coaches)
+      const wodsData = await db.getAllWods();
+      const wods = wodsData.map(w => db.wodToAppFormat(w));
+      setAllWODs(wods);
+
+      // Calculate benchmark PRs
+      const prs = calculateBenchmarkPRs(results, wods);
+      setBenchmarkPRs(prs);
+
       if (currentUser.role === 'coach') {
         loadAllResults();
-        loadAllWODs();
       }
     };
     loadData();
@@ -488,6 +503,10 @@ export default function CrossFitBoxApp() {
       const results = await loadMyResults();
       await loadMissedWODs(results); // Refresh missed WODs list
 
+      // Recalculate benchmark PRs
+      const prs = calculateBenchmarkPRs(results, allWODs);
+      setBenchmarkPRs(prs);
+
       if (currentUser.role === 'coach') {
         await loadAllResults();
       }
@@ -574,6 +593,68 @@ export default function CrossFitBoxApp() {
     }
   };
 
+  // Calculate benchmark PRs from workout history
+  const calculateBenchmarkPRs = (results, wods) => {
+    if (!results || results.length === 0) return [];
+
+    // Create a map of WOD IDs to WOD names for quick lookup
+    const wodNameMap = {};
+    wods.forEach(wod => {
+      if (wod.name && isBenchmarkWod(wod.name)) {
+        wodNameMap[wod.id] = wod.name;
+      }
+    });
+
+    // Group results by benchmark name
+    const benchmarkResults = {};
+    results.forEach(result => {
+      // Only consider results linked to a WOD (not custom workouts)
+      if (!result.wodId) return;
+
+      const wodName = wodNameMap[result.wodId];
+      if (!wodName) return;
+
+      // Normalize the benchmark name
+      const benchmark = getBenchmarkByName(wodName);
+      if (!benchmark) return;
+
+      const normalizedName = benchmark.name;
+
+      if (!benchmarkResults[normalizedName]) {
+        benchmarkResults[normalizedName] = [];
+      }
+      benchmarkResults[normalizedName].push(result);
+    });
+
+    // Find the best result for each benchmark
+    const prs = [];
+    Object.entries(benchmarkResults).forEach(([name, attempts]) => {
+      if (attempts.length === 0) return;
+
+      const benchmark = getBenchmarkByName(name);
+      const benchmarkType = benchmark?.type || 'For Time';
+
+      // Use compareScores from score-utils for correct comparison direction
+      const best = attempts.reduce((prev, curr) =>
+        compareScores(curr.time, prev.time, benchmarkType) < 0 ? curr : prev
+      );
+
+      prs.push({
+        name,
+        type: benchmarkType,
+        bestTime: best.time,
+        date: best.date,
+        attemptCount: attempts.length,
+        resultId: best.id
+      });
+    });
+
+    // Sort by most recent PR first
+    prs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    return prs;
+  };
+
   const loadMissedWODs = async (userResults = null) => {
     if (!currentUser) return;
 
@@ -647,6 +728,7 @@ export default function CrossFitBoxApp() {
     });
     setCustomMovementInput(['']);
     setShowCustomMovementDropdown([false]);
+    setCustomWodNameError('');
     setCurrentView('dashboard');
     if (currentUser.role === 'coach') {
       setCoachView('dashboard');
@@ -704,6 +786,13 @@ export default function CrossFitBoxApp() {
   };
 
   const logCustomWorkout = async () => {
+    // Block submission if custom workout name matches a benchmark
+    if (customWod.name && isBenchmarkWod(customWod.name)) {
+      const benchmark = getBenchmarkByName(customWod.name);
+      alert(`"${benchmark.name}" is a benchmark WOD name. Please use a different name for your custom workout, or log it as the official benchmark when a coach posts it.`);
+      return;
+    }
+
     // Validate custom workout has at least one movement with a name
     const validMovements = customWod.movements.filter(m => m.name.trim());
     if (validMovements.length === 0) {
@@ -736,6 +825,10 @@ export default function CrossFitBoxApp() {
       const results = await loadMyResults();
       await loadMissedWODs(results);
 
+      // Recalculate benchmark PRs
+      const prs = calculateBenchmarkPRs(results, allWODs);
+      setBenchmarkPRs(prs);
+
       if (currentUser.role === 'coach') {
         await loadAllResults();
       }
@@ -747,6 +840,7 @@ export default function CrossFitBoxApp() {
         type: 'For Time',
         movements: [{ name: '', reps: '', notes: '' }]
       });
+      setCustomWodNameError('');
       setCurrentView('dashboard');
       if (currentUser.role === 'coach') {
         setCoachView('dashboard');
@@ -1095,20 +1189,7 @@ export default function CrossFitBoxApp() {
                   />
                 </div>
                 <div>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <label className="block text-slate-400 text-sm font-medium">Password</label>
-                    <button
-                      onClick={() => {
-                        setShowForgotPassword(true);
-                        setAuthError('');
-                        setAuthSuccess('');
-                        setResetEmail(loginEmail);
-                      }}
-                      className="text-red-500 hover:text-red-400 text-sm"
-                    >
-                      Forgot password?
-                    </button>
-                  </div>
+                  <label className="block text-slate-400 text-sm font-medium mb-2.5">Password</label>
                   <input
                     type="password"
                     placeholder="••••••••"
@@ -1121,13 +1202,26 @@ export default function CrossFitBoxApp() {
                     onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                     className="w-full bg-slate-700/50 text-white text-base px-4 py-3.5 rounded-xl border border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all"
                   />
+                  <div className="text-right mt-2">
+                    <button
+                      onClick={() => {
+                        setShowForgotPassword(true);
+                        setAuthError('');
+                        setAuthSuccess('');
+                        setResetEmail(loginEmail);
+                      }}
+                      className="text-red-500 hover:text-red-400 text-sm"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <button
                 onClick={handleLogin}
                 disabled={authLoading}
-                className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl mt-10 mb-6 transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-red-600/25"
+                className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:bg-red-800 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl mt-8 mb-6 transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-red-600/25"
               >
                 {authLoading ? (
                   <>
@@ -1359,6 +1453,46 @@ export default function CrossFitBoxApp() {
                   </div>
                 </div>
 
+                {/* Personal Records Section - Coach */}
+                {benchmarkPRs.length > 0 && (
+                  <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 mb-6 border border-yellow-600/30 shadow-lg">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Trophy className="w-5 h-5 text-yellow-500" />
+                      <h3 className="text-lg font-bold text-white">Personal Records</h3>
+                      <span className="bg-yellow-600/20 text-yellow-400 text-xs px-2 py-0.5 rounded font-semibold">
+                        {benchmarkPRs.length} PR{benchmarkPRs.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {benchmarkPRs.slice(0, 5).map((pr, idx) => (
+                        <div key={idx} className="bg-slate-700/50 rounded-xl p-3 flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-white font-semibold">{pr.name}</span>
+                              <span className="bg-yellow-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                {pr.type}
+                              </span>
+                            </div>
+                            <div className="text-slate-400 text-sm mt-1">
+                              {pr.attemptCount} attempt{pr.attemptCount !== 1 ? 's' : ''} • Last: {new Date(pr.date).toLocaleDateString()}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-yellow-400 font-bold text-lg">{formatScore(pr.bestTime, pr.type)}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {benchmarkPRs.length > 5 && (
+                      <div className="mt-3 text-center">
+                        <span className="text-slate-400 text-sm">
+                          + {benchmarkPRs.length - 5} more benchmark{benchmarkPRs.length - 5 !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Today's WOD or Custom Workout Summary */}
                 {todayWOD && myResult.isCustomResult ? (
                   /* Custom Workout Completed - Show custom workout instead of daily WOD */
@@ -1385,7 +1519,7 @@ export default function CrossFitBoxApp() {
                       </span>
                     </div>
                     {myResult.time && (
-                      <div className="text-slate-300 text-sm mb-3">Time: <span className="text-white font-semibold">{myResult.time}</span></div>
+                      <div className="text-slate-300 text-sm mb-3">{getScoreLabel(myResult.customWodType || 'Other')}: <span className="text-white font-semibold">{formatScore(myResult.time, myResult.customWodType || 'Other')}</span></div>
                     )}
 
                     {/* Custom workout movements */}
@@ -1454,6 +1588,11 @@ export default function CrossFitBoxApp() {
                           <span className="bg-slate-700 text-slate-300 text-xs px-2.5 py-1 rounded-lg capitalize">
                             {todayWOD.group}
                           </span>
+                          {todayWOD.name && isBenchmarkWod(todayWOD.name) && (
+                            <span className="bg-yellow-600 text-white text-xs px-2.5 py-1 rounded-lg font-semibold">
+                              Benchmark
+                            </span>
+                          )}
                         </div>
                         <div className="text-slate-400 text-sm mb-4">
                           Posted by {todayWOD.postedBy}
@@ -1470,7 +1609,7 @@ export default function CrossFitBoxApp() {
                                 Completed
                               </span>
                               {myResult.time && (
-                                <span className="text-slate-400 text-sm">• {myResult.time}</span>
+                                <span className="text-slate-400 text-sm">• {formatScore(myResult.time, todayWOD?.type || 'Other')}</span>
                               )}
                             </div>
                           ) : (
@@ -1613,6 +1752,11 @@ export default function CrossFitBoxApp() {
                                 <span className="bg-red-600/80 text-white text-xs px-2 py-0.5 rounded">
                                   {wod.type}
                                 </span>
+                                {wod.name && isBenchmarkWod(wod.name) && (
+                                  <span className="bg-yellow-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                    Benchmark
+                                  </span>
+                                )}
                               </div>
                               <div className="text-white font-medium mb-1">
                                 {wod.name || `${wod.type} Workout`}
@@ -1737,11 +1881,16 @@ export default function CrossFitBoxApp() {
                                               Custom
                                             </span>
                                           )}
+                                          {wod?.name && isBenchmarkWod(wod.name) && (
+                                            <span className="bg-yellow-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                              Benchmark
+                                            </span>
+                                          )}
                                         </div>
                                       </div>
                                       {result.time && (
                                         <div className="bg-slate-700 px-2 py-1 rounded ml-2">
-                                          <span className="text-white text-sm font-bold">{result.time}</span>
+                                          <span className="text-white text-sm font-bold">{formatScore(result.time, result.customWodType || wod?.type || 'Other')}</span>
                                         </div>
                                       )}
                                     </div>
@@ -1946,11 +2095,16 @@ export default function CrossFitBoxApp() {
                                             Custom
                                           </span>
                                         )}
+                                        {wod?.name && isBenchmarkWod(wod.name) && (
+                                          <span className="bg-yellow-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                            Benchmark
+                                          </span>
+                                        )}
                                       </div>
                                     </div>
                                     {result.time && (
                                       <div className="bg-slate-700 px-3 py-1 rounded-lg ml-2">
-                                        <span className="text-white font-bold text-sm">{result.time}</span>
+                                        <span className="text-white font-bold text-sm">{formatScore(result.time, result.customWodType || wod?.type || 'Other')}</span>
                                       </div>
                                     )}
                                   </div>
@@ -2070,6 +2224,9 @@ export default function CrossFitBoxApp() {
                           <>
                             <span className="bg-red-600 text-white text-sm px-3 py-1 rounded">{todayWOD.type}</span>
                             <span className="bg-slate-700 text-white text-sm px-3 py-1 rounded capitalize">{todayWOD.group}</span>
+                            {todayWOD.name && isBenchmarkWod(todayWOD.name) && (
+                              <span className="bg-yellow-600 text-white text-sm px-3 py-1 rounded font-semibold">Benchmark</span>
+                            )}
                           </>
                         )}
                       </div>
@@ -2101,13 +2258,10 @@ export default function CrossFitBoxApp() {
                     )}
 
                     <div className="mb-4">
-                      <label className="block text-slate-300 mb-2">Your Time/Score</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., 12:34 or 8 rounds + 15 reps"
+                      <ScoreInput
+                        wodType={editingWorkout ? (editingWorkout.customWodType || allWODs.find(w => w.id === editingWorkout.wodId)?.type || 'Other') : (todayWOD?.type || 'Other')}
                         value={myResult.time}
-                        onChange={(e) => setMyResult({ ...myResult, time: e.target.value })}
-                        className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+                        onChange={(val) => setMyResult({ ...myResult, time: val })}
                       />
                     </div>
 
@@ -2224,9 +2378,20 @@ export default function CrossFitBoxApp() {
                         type="text"
                         placeholder="e.g., Travel WOD, Hotel Workout"
                         value={customWod.name}
-                        onChange={(e) => setCustomWod({ ...customWod, name: e.target.value })}
-                        className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+                        onChange={(e) => {
+                          const name = e.target.value;
+                          setCustomWod({ ...customWod, name });
+                          if (isBenchmarkWod(name)) {
+                            setCustomWodNameError(`"${getBenchmarkByName(name).name}" is a benchmark WOD. Please use a different name or log it as the official benchmark when a coach posts it.`);
+                          } else {
+                            setCustomWodNameError('');
+                          }
+                        }}
+                        className={`w-full bg-slate-700 text-white px-4 py-3 rounded-lg border ${customWodNameError ? 'border-red-500' : 'border-slate-600'} focus:border-red-500 focus:outline-none`}
                       />
+                      {customWodNameError && (
+                        <p className="text-red-400 text-sm mt-2">{customWodNameError}</p>
+                      )}
                     </div>
 
                     {/* Workout Type */}
@@ -2314,13 +2479,10 @@ export default function CrossFitBoxApp() {
 
                     {/* Time */}
                     <div className="mb-4">
-                      <label className="block text-slate-300 mb-2">Time / Score</label>
-                      <input
-                        type="text"
-                        placeholder="e.g., 15:30, 5 rounds + 10 reps"
+                      <ScoreInput
+                        wodType={customWod.type}
                         value={myResult.time}
-                        onChange={(e) => setMyResult({ ...myResult, time: e.target.value })}
-                        className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+                        onChange={(val) => setMyResult({ ...myResult, time: val })}
                       />
                     </div>
 
@@ -2478,6 +2640,11 @@ export default function CrossFitBoxApp() {
                                       <span className="bg-slate-700 text-white text-xs px-2 py-1 rounded capitalize">
                                         {wod.group}
                                       </span>
+                                      {wod.name && isBenchmarkWod(wod.name) && (
+                                        <span className="bg-yellow-600 text-white text-xs px-2 py-1 rounded font-semibold">
+                                          Benchmark
+                                        </span>
+                                      )}
                                     </div>
                                     <div className="text-slate-400 text-xs">
                                       Posted by {wod.postedBy}
@@ -2553,11 +2720,49 @@ export default function CrossFitBoxApp() {
                         </svg>
                       </button>
                     </div>
-                    
+
+                    {/* Benchmark WOD Selector */}
+                    <div className="mb-4">
+                      <label className="block text-slate-300 text-sm font-medium mb-2">
+                        Benchmark Template <span className="text-slate-500">(Quick Fill)</span>
+                      </label>
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const benchmark = getBenchmarkByName(e.target.value);
+                          if (benchmark) {
+                            setNewWOD({
+                              ...newWOD,
+                              name: benchmark.name,
+                              type: benchmark.type,
+                              movements: benchmark.movements.map(m => ({ ...m }))
+                            });
+                            setMovementInput(benchmark.movements.map(m => m.name));
+                            setShowMovementDropdown(benchmark.movements.map(() => false));
+                          }
+                        }}
+                        className="w-full bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none text-sm"
+                      >
+                        <option value="">Select a benchmark WOD...</option>
+                        {Object.entries(getBenchmarksByCategory()).map(([category, wods]) => (
+                          <optgroup key={category} label={category}>
+                            {wods.map(wod => (
+                              <option key={wod.name} value={wod.name}>{wod.name}</option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </div>
+
                     {/* WOD Name Field */}
                     <div className="mb-4">
                       <label className="block text-slate-300 text-sm font-medium mb-2">
                         WOD Name <span className="text-slate-500">(Optional)</span>
+                        {isBenchmarkWod(newWOD.name) && (
+                          <span className="ml-2 bg-yellow-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                            Benchmark
+                          </span>
+                        )}
                       </label>
                       <input
                         type="text"
@@ -2893,6 +3098,11 @@ export default function CrossFitBoxApp() {
                                                   Custom
                                                 </span>
                                               )}
+                                              {wod?.name && isBenchmarkWod(wod.name) && (
+                                                <span className="bg-yellow-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                                  Benchmark
+                                                </span>
+                                              )}
                                             </div>
                                             <div className="flex items-center gap-2">
                                               <Calendar className="w-3 h-3 text-red-500" />
@@ -2907,7 +3117,7 @@ export default function CrossFitBoxApp() {
                                           </div>
                                           {workout.time && (
                                             <div className="bg-slate-700 px-2 py-1 rounded ml-2">
-                                              <span className="text-white text-xs font-bold">{workout.time}</span>
+                                              <span className="text-white text-xs font-bold">{formatScore(workout.time, workout.customWodType || wod?.type || 'Other')}</span>
                                             </div>
                                           )}
                                         </div>
@@ -3103,6 +3313,46 @@ export default function CrossFitBoxApp() {
               </div>
             </div>
 
+            {/* Personal Records Section */}
+            {benchmarkPRs.length > 0 && (
+              <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 mb-6 border border-yellow-600/30 shadow-lg">
+                <div className="flex items-center gap-2 mb-4">
+                  <Trophy className="w-5 h-5 text-yellow-500" />
+                  <h3 className="text-lg font-bold text-white">Personal Records</h3>
+                  <span className="bg-yellow-600/20 text-yellow-400 text-xs px-2 py-0.5 rounded font-semibold">
+                    {benchmarkPRs.length} PR{benchmarkPRs.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {benchmarkPRs.slice(0, 5).map((pr, idx) => (
+                    <div key={idx} className="bg-slate-700/50 rounded-xl p-3 flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white font-semibold">{pr.name}</span>
+                          <span className="bg-yellow-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                            {pr.type}
+                          </span>
+                        </div>
+                        <div className="text-slate-400 text-sm mt-1">
+                          {pr.attemptCount} attempt{pr.attemptCount !== 1 ? 's' : ''} • Last: {new Date(pr.date).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-yellow-400 font-bold text-lg">{formatScore(pr.bestTime, pr.type)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {benchmarkPRs.length > 5 && (
+                  <div className="mt-3 text-center">
+                    <span className="text-slate-400 text-sm">
+                      + {benchmarkPRs.length - 5} more benchmark{benchmarkPRs.length - 5 !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Quick Action - Today's WOD Status */}
             {todayWOD && myResult.isCustomResult ? (
               /* Custom Workout Completed - Show custom workout instead of daily WOD */
@@ -3129,7 +3379,7 @@ export default function CrossFitBoxApp() {
                   </span>
                 </div>
                 {myResult.time && (
-                  <div className="text-slate-300 text-sm mb-3">Time: <span className="text-white font-semibold">{myResult.time}</span></div>
+                  <div className="text-slate-300 text-sm mb-3">{getScoreLabel(myResult.customWodType || 'Other')}: <span className="text-white font-semibold">{formatScore(myResult.time, myResult.customWodType || 'Other')}</span></div>
                 )}
 
                 {/* Custom workout movements */}
@@ -3185,6 +3435,11 @@ export default function CrossFitBoxApp() {
                       <span className="bg-slate-700 text-slate-300 text-xs px-2.5 py-1 rounded-lg capitalize">
                         {todayWOD.group}
                       </span>
+                      {todayWOD.name && isBenchmarkWod(todayWOD.name) && (
+                        <span className="bg-yellow-600 text-white text-xs px-2.5 py-1 rounded-lg font-semibold">
+                          Benchmark
+                        </span>
+                      )}
                     </div>
                     <div className="text-slate-400 text-sm mb-4">
                       Posted by {todayWOD.postedBy}
@@ -3201,7 +3456,7 @@ export default function CrossFitBoxApp() {
                             Completed
                           </span>
                           {myResult.time && (
-                            <span className="text-slate-400 text-sm">• {myResult.time}</span>
+                            <span className="text-slate-400 text-sm">• {formatScore(myResult.time, todayWOD?.type || 'Other')}</span>
                           )}
                         </div>
                       ) : (
@@ -3318,6 +3573,11 @@ export default function CrossFitBoxApp() {
                             <span className="bg-red-600/80 text-white text-xs px-2 py-0.5 rounded">
                               {wod.type}
                             </span>
+                            {wod.name && isBenchmarkWod(wod.name) && (
+                              <span className="bg-yellow-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                Benchmark
+                              </span>
+                            )}
                           </div>
                           <div className="text-white font-medium mb-1">
                             {wod.name || `${wod.type} Workout`}
@@ -3447,11 +3707,16 @@ export default function CrossFitBoxApp() {
                                         Custom
                                       </span>
                                     )}
+                                    {wod?.name && isBenchmarkWod(wod.name) && (
+                                      <span className="bg-yellow-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                        Benchmark
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                                 {result.time && (
                                   <div className="bg-slate-700 px-3 py-1.5 rounded-lg ml-2">
-                                    <span className="text-white font-bold text-sm">{result.time}</span>
+                                    <span className="text-white font-bold text-sm">{formatScore(result.time, result.customWodType || wod?.type || 'Other')}</span>
                                   </div>
                                 )}
                               </div>
@@ -3461,10 +3726,10 @@ export default function CrossFitBoxApp() {
                                 <div className="flex items-center gap-1 text-slate-400">
                                   <Calendar className="w-3 h-3 text-red-500" />
                                   <span className="text-slate-300">
-                                    {new Date(result.date).toLocaleDateString('en-US', { 
-                                      weekday: 'short', 
-                                      month: 'short', 
-                                      day: 'numeric' 
+                                    {new Date(result.date).toLocaleDateString('en-US', {
+                                      weekday: 'short',
+                                      month: 'short',
+                                      day: 'numeric'
                                     })}
                                   </span>
                                 </div>
@@ -3676,11 +3941,16 @@ export default function CrossFitBoxApp() {
                                         Custom
                                       </span>
                                     )}
+                                    {wod?.name && isBenchmarkWod(wod.name) && (
+                                      <span className="bg-yellow-600 text-white text-xs px-2 py-0.5 rounded font-semibold">
+                                        Benchmark
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
                                 {result.time && (
                                   <div className="bg-slate-700 px-3 py-1 rounded-lg ml-2">
-                                    <span className="text-white font-bold text-sm">{result.time}</span>
+                                    <span className="text-white font-bold text-sm">{formatScore(result.time, result.customWodType || wod?.type || 'Other')}</span>
                                   </div>
                                 )}
                               </div>
@@ -3690,10 +3960,10 @@ export default function CrossFitBoxApp() {
                                 <div className="flex items-center gap-1 text-slate-400">
                                   <Calendar className="w-3 h-3 text-red-500" />
                                   <span className="text-slate-300">
-                                    {new Date(result.date).toLocaleDateString('en-US', { 
-                                      weekday: 'short', 
-                                      month: 'short', 
-                                      day: 'numeric' 
+                                    {new Date(result.date).toLocaleDateString('en-US', {
+                                      weekday: 'short',
+                                      month: 'short',
+                                      day: 'numeric'
                                     })}
                                   </span>
                                 </div>
@@ -3820,11 +4090,14 @@ export default function CrossFitBoxApp() {
               <h2 className="text-2xl font-bold text-white">
                 {editingWorkout ? 'Edit Workout' : 'Today\'s WOD'}
               </h2>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {todayWOD && !editingWorkout && (
                   <>
                     <span className="bg-red-600 text-white text-sm px-3 py-1 rounded">{todayWOD.type}</span>
                     <span className="bg-slate-700 text-white text-sm px-3 py-1 rounded capitalize">{todayWOD.group}</span>
+                    {todayWOD.name && isBenchmarkWod(todayWOD.name) && (
+                      <span className="bg-yellow-600 text-white text-sm px-3 py-1 rounded font-semibold">Benchmark</span>
+                    )}
                   </>
                 )}
               </div>
@@ -3877,13 +4150,10 @@ export default function CrossFitBoxApp() {
             )}
 
             <div className="mb-4">
-              <label className="block text-slate-300 mb-2">Your Time/Score</label>
-              <input
-                type="text"
-                placeholder="e.g., 12:34 or 8 rounds + 15 reps"
+              <ScoreInput
+                wodType={editingWorkout ? (editingWorkout.customWodType || allWODs.find(w => w.id === editingWorkout.wodId)?.type || 'Other') : (todayWOD?.type || 'Other')}
                 value={myResult.time}
-                onChange={(e) => setMyResult({ ...myResult, time: e.target.value })}
-                className="w-full bg-slate-700 text-white px-4 py-2 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+                onChange={(val) => setMyResult({ ...myResult, time: val })}
               />
             </div>
 
@@ -3991,9 +4261,21 @@ export default function CrossFitBoxApp() {
                 type="text"
                 placeholder="e.g., Travel WOD, Hotel Workout"
                 value={customWod.name}
-                onChange={(e) => setCustomWod({ ...customWod, name: e.target.value })}
-                className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+                onChange={(e) => {
+                  const name = e.target.value;
+                  setCustomWod({ ...customWod, name });
+                  // Check if name matches a benchmark WOD
+                  if (isBenchmarkWod(name)) {
+                    setCustomWodNameError(`"${getBenchmarkByName(name).name}" is a benchmark WOD. Please use a different name or log it as the official benchmark when a coach posts it.`);
+                  } else {
+                    setCustomWodNameError('');
+                  }
+                }}
+                className={`w-full bg-slate-700 text-white px-4 py-3 rounded-lg border ${customWodNameError ? 'border-red-500' : 'border-slate-600'} focus:border-red-500 focus:outline-none`}
               />
+              {customWodNameError && (
+                <p className="text-red-400 text-sm mt-2">{customWodNameError}</p>
+              )}
             </div>
 
             {/* Workout Type */}
@@ -4080,13 +4362,10 @@ export default function CrossFitBoxApp() {
 
             {/* Time Result */}
             <div className="mb-4">
-              <label className="block text-slate-300 mb-2">Your Time / Score</label>
-              <input
-                type="text"
-                placeholder="e.g., 12:30, 5 rounds + 10 reps"
+              <ScoreInput
+                wodType={customWod.type}
                 value={myResult.time}
-                onChange={(e) => setMyResult({ ...myResult, time: e.target.value })}
-                className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
+                onChange={(val) => setMyResult({ ...myResult, time: val })}
               />
             </div>
 
