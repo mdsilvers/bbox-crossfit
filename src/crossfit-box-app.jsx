@@ -439,6 +439,7 @@ export default function CrossFitBoxApp() {
       setShowMovementDropdown([false]);
       await loadAllWODs();
       await loadTodayWOD();
+      await loadMyResults();
     } catch (error) {
       alert('Error posting WOD: ' + error.message);
     }
