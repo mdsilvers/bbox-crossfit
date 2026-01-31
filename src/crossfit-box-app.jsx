@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Dumbbell, Clock, Calendar, Users, Image, LogOut, UserCircle, Trophy } from 'lucide-react';
+import { Plus, Trash2, Dumbbell, Clock, Calendar, Users, Image, LogOut, UserCircle, Trophy, TrendingUp } from 'lucide-react';
 import { supabase, clearSupabaseStorage } from './lib/supabase';
 import * as db from './lib/database';
 import { getBenchmarksByCategory, getBenchmarkByName, isBenchmarkWod, ALL_BENCHMARKS } from './lib/benchmarks';
 import { formatScore, getScoreLabel, compareScores, getScoreCategory } from './lib/score-utils';
 import ScoreInput from './components/ScoreInput';
+import ProgressDashboard from './components/ProgressDashboard';
 
 // Standard CrossFit movements list
 const STANDARD_MOVEMENTS = [
@@ -2940,6 +2941,16 @@ export default function CrossFitBoxApp() {
               </>
             )}
 
+            {/* Progress View - Coach's personal progress */}
+            {coachView === 'progress' && (
+              <ProgressDashboard
+                currentUser={currentUser}
+                workoutResults={workoutResults}
+                allAthleteResults={allAthleteResults}
+                allWODs={allWODs}
+              />
+            )}
+
             {/* Athletes View - Results Feed */}
             {coachView === 'athletes' && (
               <>
@@ -3170,7 +3181,7 @@ export default function CrossFitBoxApp() {
 
           {/* Bottom Navigation */}
           <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 safe-area-inset-bottom">
-            <div className="max-w-2xl mx-auto grid grid-cols-5 text-center">
+            <div className="max-w-2xl mx-auto grid grid-cols-6 text-center">
               <button
                 onClick={() => setCoachView('dashboard')}
                 className={`py-3 flex flex-col items-center gap-1 ${
@@ -3199,6 +3210,15 @@ export default function CrossFitBoxApp() {
               >
                 <Clock className="w-6 h-6" />
                 <span className="text-xs">History</span>
+              </button>
+              <button
+                onClick={() => setCoachView('progress')}
+                className={`py-3 flex flex-col items-center gap-1 ${
+                  coachView === 'progress' ? 'text-red-500' : 'text-slate-400'
+                }`}
+              >
+                <TrendingUp className="w-6 h-6" />
+                <span className="text-xs">Progress</span>
               </button>
               <button
                 onClick={() => setCoachView('program')}
@@ -3281,6 +3301,16 @@ export default function CrossFitBoxApp() {
               }`}
             >
               History
+            </button>
+            <button
+              onClick={() => setCurrentView('progress')}
+              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all text-sm ${
+                currentView === 'progress'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-slate-800 text-slate-400 hover:text-white'
+              }`}
+            >
+              Progress
             </button>
           </div>
 
@@ -4043,6 +4073,16 @@ export default function CrossFitBoxApp() {
               );
             })()}
           </div>
+        )}
+
+        {/* Progress View */}
+        {currentView === 'progress' && (
+          <ProgressDashboard
+            currentUser={currentUser}
+            workoutResults={workoutResults}
+            allAthleteResults={allAthleteResults}
+            allWODs={allWODs}
+          />
         )}
 
         {/* Workout View - Today's WOD Logging */}

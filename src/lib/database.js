@@ -335,6 +335,92 @@ export async function getResultsForDate(date) {
   return data || [];
 }
 
+// ==================== BENCHMARK RESULTS FUNCTIONS ====================
+
+export async function getAllResultsForBenchmark(wodIds) {
+  // wodIds is an array of WOD IDs that match the benchmark name
+  if (!wodIds || wodIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('results')
+    .select('*')
+    .in('wod_id', wodIds)
+    .order('date', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+// ==================== BODY MEASUREMENTS FUNCTIONS ====================
+
+export async function getBodyMeasurements(userId) {
+  const { data, error } = await supabase
+    .from('body_measurements')
+    .select('*')
+    .eq('user_id', userId)
+    .order('measured_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createBodyMeasurement(userId, measurement) {
+  const { data, error } = await supabase
+    .from('body_measurements')
+    .insert({
+      user_id: userId,
+      measured_at: measurement.measured_at || new Date().toISOString().split('T')[0],
+      weight_lbs: measurement.weight_lbs || null,
+      body_fat_pct: measurement.body_fat_pct || null,
+      chest_in: measurement.chest_in || null,
+      waist_in: measurement.waist_in || null,
+      hips_in: measurement.hips_in || null,
+      left_arm_in: measurement.left_arm_in || null,
+      right_arm_in: measurement.right_arm_in || null,
+      left_thigh_in: measurement.left_thigh_in || null,
+      right_thigh_in: measurement.right_thigh_in || null,
+      notes: measurement.notes || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateBodyMeasurement(id, measurement) {
+  const { data, error } = await supabase
+    .from('body_measurements')
+    .update({
+      measured_at: measurement.measured_at,
+      weight_lbs: measurement.weight_lbs || null,
+      body_fat_pct: measurement.body_fat_pct || null,
+      chest_in: measurement.chest_in || null,
+      waist_in: measurement.waist_in || null,
+      hips_in: measurement.hips_in || null,
+      left_arm_in: measurement.left_arm_in || null,
+      right_arm_in: measurement.right_arm_in || null,
+      left_thigh_in: measurement.left_thigh_in || null,
+      right_thigh_in: measurement.right_thigh_in || null,
+      notes: measurement.notes || null,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteBodyMeasurement(id) {
+  const { error } = await supabase
+    .from('body_measurements')
+    .delete()
+    .eq('id', id);
+
+  if (error) throw error;
+}
+
 // ==================== HELPER FUNCTIONS ====================
 
 // Transform Supabase profile to app user format
