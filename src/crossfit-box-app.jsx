@@ -1694,6 +1694,16 @@ export default function CrossFitBoxApp() {
                         Edit WOD
                       </button>
                     </div>
+
+                    {/* Custom Workout Option */}
+                    {!myResult.existingResultId && (
+                      <button
+                        onClick={startCustomWorkout}
+                        className="w-full mt-3 text-slate-400 hover:text-white text-sm font-medium transition-colors"
+                      >
+                        Did a different workout? Log custom WOD
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="bg-slate-800 rounded-xl p-6 text-center border border-slate-700 mb-6">
@@ -1720,6 +1730,13 @@ export default function CrossFitBoxApp() {
                     >
                       <Plus className="w-5 h-5" />
                       Post Today's WOD
+                    </button>
+                    <button
+                      onClick={startCustomWorkout}
+                      className="mt-3 bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-lg font-semibold transition-colors inline-flex items-center gap-2"
+                    >
+                      <Dumbbell className="w-5 h-5" />
+                      Log Custom Workout
                     </button>
                   </div>
                 )}
@@ -3181,7 +3198,7 @@ export default function CrossFitBoxApp() {
 
           {/* Bottom Navigation */}
           <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 safe-area-inset-bottom">
-            <div className="max-w-2xl mx-auto grid grid-cols-6 text-center">
+            <div className="max-w-2xl mx-auto grid grid-cols-5 text-center">
               <button
                 onClick={() => setCoachView('dashboard')}
                 className={`py-3 flex flex-col items-center gap-1 ${
@@ -3192,15 +3209,6 @@ export default function CrossFitBoxApp() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
                 <span className="text-xs">Home</span>
-              </button>
-              <button
-                onClick={() => setCoachView('workout')}
-                className={`py-3 flex flex-col items-center gap-1 ${
-                  coachView === 'workout' ? 'text-red-500' : 'text-slate-400'
-                }`}
-              >
-                <Dumbbell className="w-6 h-6" />
-                <span className="text-xs">Log</span>
               </button>
               <button
                 onClick={() => setCoachView('history')}
