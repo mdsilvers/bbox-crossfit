@@ -175,7 +175,7 @@ export default function WeeklySummary({ workoutResults, allWODs }) {
         </div>
         <div className="bg-slate-700/50 rounded-xl p-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-slate-400 text-xs">Volume (lbs)</span>
+            <span className="text-slate-400 text-xs">Volume (kgs)</span>
             <ComparisonArrow current={summary.totalVolume} previous={summary.lastWeekVolume} />
           </div>
           <div className="text-2xl font-bold text-white">{formatVolume(summary.totalVolume)}</div>

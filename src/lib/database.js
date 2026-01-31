@@ -370,7 +370,7 @@ export async function createBodyMeasurement(userId, measurement) {
     .insert({
       user_id: userId,
       measured_at: measurement.measured_at || new Date().toISOString().split('T')[0],
-      weight_lbs: measurement.weight_lbs || null,
+      weight_kgs: measurement.weight_kgs || null,
       body_fat_pct: measurement.body_fat_pct || null,
       chest_in: measurement.chest_in || null,
       waist_in: measurement.waist_in || null,
@@ -393,7 +393,7 @@ export async function updateBodyMeasurement(id, measurement) {
     .from('body_measurements')
     .update({
       measured_at: measurement.measured_at,
-      weight_lbs: measurement.weight_lbs || null,
+      weight_kgs: measurement.weight_kgs || null,
       body_fat_pct: measurement.body_fat_pct || null,
       chest_in: measurement.chest_in || null,
       waist_in: measurement.waist_in || null,

@@ -36,7 +36,7 @@ export const BENCHMARK_WODS = {
       name: 'Diane',
       type: 'For Time',
       movements: [
-        { name: 'Deadlift', reps: '21-15-9', notes: 'Rx: 225/155 lb' },
+        { name: 'Deadlift', reps: '21-15-9', notes: 'Rx: 102/70 kg' },
         { name: 'Handstand Push-up', reps: '21-15-9', notes: '' }
       ]
     },
@@ -44,7 +44,7 @@ export const BENCHMARK_WODS = {
       name: 'Elizabeth',
       type: 'For Time',
       movements: [
-        { name: 'Clean', reps: '21-15-9', notes: 'Rx: 135/95 lb' },
+        { name: 'Clean', reps: '21-15-9', notes: 'Rx: 61/43 kg' },
         { name: 'Ring Dip', reps: '21-15-9', notes: '' }
       ]
     },
@@ -52,7 +52,7 @@ export const BENCHMARK_WODS = {
       name: 'Fran',
       type: 'For Time',
       movements: [
-        { name: 'Thruster', reps: '21-15-9', notes: 'Rx: 95/65 lb' },
+        { name: 'Thruster', reps: '21-15-9', notes: 'Rx: 43/29 kg' },
         { name: 'Pull-up', reps: '21-15-9', notes: '' }
       ]
     },
@@ -60,7 +60,7 @@ export const BENCHMARK_WODS = {
       name: 'Grace',
       type: 'For Time',
       movements: [
-        { name: 'Clean and Jerk', reps: '30', notes: 'Rx: 135/95 lb' }
+        { name: 'Clean and Jerk', reps: '30', notes: 'Rx: 61/43 kg' }
       ]
     },
     {
@@ -68,7 +68,7 @@ export const BENCHMARK_WODS = {
       type: 'For Time',
       movements: [
         { name: 'Run', reps: '3x400m', notes: '3 Rounds' },
-        { name: 'Kettlebell Swing', reps: '3x21', notes: 'Rx: 53/35 lb (1.5/1 pood)' },
+        { name: 'Kettlebell Swing', reps: '3x21', notes: 'Rx: 24/16 kg (1.5/1 pood)' },
         { name: 'Pull-up', reps: '3x12', notes: '' }
       ]
     },
@@ -76,7 +76,7 @@ export const BENCHMARK_WODS = {
       name: 'Isabel',
       type: 'For Time',
       movements: [
-        { name: 'Snatch', reps: '30', notes: 'Rx: 135/95 lb' }
+        { name: 'Snatch', reps: '30', notes: 'Rx: 61/43 kg' }
       ]
     },
     {
@@ -84,7 +84,7 @@ export const BENCHMARK_WODS = {
       type: 'For Time',
       movements: [
         { name: 'Row', reps: '1000m', notes: '' },
-        { name: 'Thruster', reps: '50', notes: 'Rx: 45/35 lb' },
+        { name: 'Thruster', reps: '50', notes: 'Rx: 20/16 kg' },
         { name: 'Pull-up', reps: '30', notes: '' }
       ]
     },
@@ -92,7 +92,7 @@ export const BENCHMARK_WODS = {
       name: 'Karen',
       type: 'For Time',
       movements: [
-        { name: 'Wall Ball', reps: '150', notes: 'Rx: 20/14 lb to 10/9 ft' }
+        { name: 'Wall Ball', reps: '150', notes: 'Rx: 9/6 kg to 10/9 ft' }
       ]
     },
     {
@@ -118,7 +118,7 @@ export const BENCHMARK_WODS = {
       type: 'For Time',
       movements: [
         { name: 'Run', reps: '5x400m', notes: '5 Rounds' },
-        { name: 'Overhead Squat', reps: '5x15', notes: 'Rx: 95/65 lb' }
+        { name: 'Overhead Squat', reps: '5x15', notes: 'Rx: 43/29 kg' }
       ]
     },
     {
@@ -134,7 +134,7 @@ export const BENCHMARK_WODS = {
       type: 'For Time',
       movements: [
         { name: 'Run', reps: '5x800m', notes: '5 Rounds' },
-        { name: 'Kettlebell Swing', reps: '5x30', notes: 'Rx: 70/53 lb (2/1.5 pood)' },
+        { name: 'Kettlebell Swing', reps: '5x30', notes: 'Rx: 32/24 kg (2/1.5 pood)' },
         { name: 'Pull-up', reps: '5x30', notes: '' }
       ]
     },
@@ -144,7 +144,7 @@ export const BENCHMARK_WODS = {
       movements: [
         { name: 'Run', reps: '5x400m', notes: '5 Rounds' },
         { name: 'Box Jump', reps: '5x30', notes: 'Rx: 24/20 in' },
-        { name: 'Wall Ball', reps: '5x30', notes: 'Rx: 20/14 lb' }
+        { name: 'Wall Ball', reps: '5x30', notes: 'Rx: 9/6 kg' }
       ]
     },
     {
@@ -186,7 +186,7 @@ export const BENCHMARK_WODS = {
       type: 'For Time',
       movements: [
         { name: 'Muscle-up', reps: '9-7-5', notes: '' },
-        { name: 'Squat Snatch', reps: '9-7-5', notes: 'Rx: 135/95 lb' }
+        { name: 'Squat Snatch', reps: '9-7-5', notes: 'Rx: 61/43 kg' }
       ]
     },
     {
@@ -200,7 +200,7 @@ export const BENCHMARK_WODS = {
       name: 'Grettel',
       type: 'For Time',
       movements: [
-        { name: 'Clean and Jerk', reps: '10x3', notes: '10 Rounds, Rx: 135/95 lb' },
+        { name: 'Clean and Jerk', reps: '10x3', notes: '10 Rounds, Rx: 61/43 kg' },
         { name: 'Burpee', reps: '10x3', notes: 'Bar-facing burpees' }
       ]
     },
@@ -208,7 +208,7 @@ export const BENCHMARK_WODS = {
       name: 'Ingrid',
       type: 'For Time',
       movements: [
-        { name: 'Snatch', reps: '10x3', notes: '10 Rounds, Rx: 135/95 lb' },
+        { name: 'Snatch', reps: '10x3', notes: '10 Rounds, Rx: 61/43 kg' },
         { name: 'Burpee', reps: '10x3', notes: 'Bar-over burpees' }
       ]
     },
@@ -217,7 +217,7 @@ export const BENCHMARK_WODS = {
       type: 'For Time',
       movements: [
         { name: 'Handstand Push-up', reps: '5x20', notes: '5 Rounds' },
-        { name: 'Deadlift', reps: '5x30', notes: 'Rx: 135/95 lb' },
+        { name: 'Deadlift', reps: '5x30', notes: 'Rx: 61/43 kg' },
         { name: 'Sit-up', reps: '5x40', notes: '' },
         { name: 'Double Under', reps: '5x50', notes: 'Rest 3:00 between rounds' }
       ]
@@ -235,18 +235,18 @@ export const BENCHMARK_WODS = {
       type: 'For Time',
       movements: [
         { name: 'Burpee', reps: '3x20', notes: '3 Rounds' },
-        { name: 'Dumbbell Snatch', reps: '3x21', notes: 'Rx: 50/35 lb, alternating' },
-        { name: 'Dumbbell Thruster', reps: '3x12', notes: 'Rx: 50/35 lb, dual' }
+        { name: 'Dumbbell Snatch', reps: '3x21', notes: 'Rx: 22.5/16 kg, alternating' },
+        { name: 'Dumbbell Thruster', reps: '3x12', notes: 'Rx: 22.5/16 kg, dual' }
       ]
     },
     {
       name: 'Andi',
       type: 'For Time',
       movements: [
-        { name: 'Hang Power Snatch', reps: '100', notes: 'Rx: 65/45 lb' },
-        { name: 'Push Press', reps: '100', notes: 'Rx: 65/45 lb' },
-        { name: 'Sumo Deadlift High Pull', reps: '100', notes: 'Rx: 65/45 lb' },
-        { name: 'Front Squat', reps: '100', notes: 'Rx: 65/45 lb' }
+        { name: 'Hang Power Snatch', reps: '100', notes: 'Rx: 29/20 kg' },
+        { name: 'Push Press', reps: '100', notes: 'Rx: 29/20 kg' },
+        { name: 'Sumo Deadlift High Pull', reps: '100', notes: 'Rx: 29/20 kg' },
+        { name: 'Front Squat', reps: '100', notes: 'Rx: 29/20 kg' }
       ]
     },
     {

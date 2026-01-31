@@ -2245,7 +2245,7 @@ export default function CrossFitBoxApp() {
                           </div>
                           <input
                             type="text"
-                            placeholder="Your weight (e.g., 75lb, scaled, bodyweight)"
+                            placeholder="Your weight (e.g., 34kg, scaled, bodyweight)"
                             value={myResult.movements[idx]?.weight || ''}
                             onChange={(e) => updateMovementWeight(idx, e.target.value)}
                             className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
@@ -4157,7 +4157,7 @@ export default function CrossFitBoxApp() {
                     </div>
                     <input
                       type="text"
-                      placeholder="Your weight (e.g., 75lb, scaled, bodyweight)"
+                      placeholder="Your weight (e.g., 34kg, scaled, bodyweight)"
                       value={movement.weight || ''}
                       onChange={(e) => updateMovementWeight(idx, e.target.value)}
                       className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
@@ -4175,7 +4175,7 @@ export default function CrossFitBoxApp() {
                     </div>
                     <input
                       type="text"
-                      placeholder="Your weight (e.g., 75lb, scaled, bodyweight)"
+                      placeholder="Your weight (e.g., 34kg, scaled, bodyweight)"
                       value=""
                       onChange={(e) => updateMovementWeight(idx, e.target.value)}
                       className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"

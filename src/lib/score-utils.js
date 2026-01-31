@@ -136,7 +136,7 @@ export const formatScore = (value, wodType) => {
     }
     case 'weight': {
       const num = parseFloat(value);
-      if (!isNaN(num)) return `${value} lbs`;
+      if (!isNaN(num)) return `${value} kgs`;
       return value;
     }
     case 'rounds': {
@@ -217,8 +217,8 @@ export const parseStoredScore = (value, wodType) => {
       return { rounds: String(parsed.rounds), reps: String(parsed.reps) };
     }
     case 'weight': {
-      // Strip "lbs" suffix if present
-      const cleaned = value.replace(/\s*lbs?\s*$/i, '').trim();
+      // Strip weight unit suffix if present
+      const cleaned = value.replace(/\s*(?:lbs?|kgs?)\s*$/i, '').trim();
       const num = parseFloat(cleaned);
       if (isNaN(num)) return null;
       return { weight: cleaned };

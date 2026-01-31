@@ -5,7 +5,7 @@ import { format, parseISO } from 'date-fns';
 import * as db from '../lib/database';
 
 const MEASUREMENT_FIELDS = [
-  { key: 'weight_lbs', label: 'Weight', unit: 'lbs', color: '#c95f5f' },
+  { key: 'weight_kgs', label: 'Weight', unit: 'kgs', color: '#c95f5f' },
   { key: 'body_fat_pct', label: 'Body Fat', unit: '%', color: '#d4ba6a' },
   { key: 'chest_in', label: 'Chest', unit: 'in', color: '#5fa877' },
   { key: 'waist_in', label: 'Waist', unit: 'in', color: '#5a8ac9' },
@@ -18,7 +18,7 @@ const MEASUREMENT_FIELDS = [
 
 const emptyForm = {
   measured_at: new Date().toISOString().split('T')[0],
-  weight_lbs: '',
+  weight_kgs: '',
   body_fat_pct: '',
   chest_in: '',
   waist_in: '',
@@ -38,7 +38,7 @@ export default function BodyComposition({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [activeChartField, setActiveChartField] = useState('weight_lbs');
+  const [activeChartField, setActiveChartField] = useState('weight_kgs');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   useEffect(() => {
@@ -84,7 +84,7 @@ export default function BodyComposition({ currentUser }) {
   const handleEdit = (m) => {
     setForm({
       measured_at: m.measured_at,
-      weight_lbs: m.weight_lbs ?? '',
+      weight_kgs: m.weight_kgs ?? '',
       body_fat_pct: m.body_fat_pct ?? '',
       chest_in: m.chest_in ?? '',
       waist_in: m.waist_in ?? '',

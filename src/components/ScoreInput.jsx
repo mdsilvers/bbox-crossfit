@@ -197,7 +197,7 @@ export default function ScoreInput({ wodType, value, onChange }) {
     case 'weight':
       return (
         <div>
-          <label className="block text-slate-300 mb-2">Weight (lbs)</label>
+          <label className="block text-slate-300 mb-2">Weight (kgs)</label>
           <div className="flex items-center gap-2">
             <input
               type="text"
@@ -212,7 +212,7 @@ export default function ScoreInput({ wodType, value, onChange }) {
               }}
               className={`w-32 ${inputClass}`}
             />
-            <span className="text-slate-400 text-sm">lbs</span>
+            <span className="text-slate-400 text-sm">kgs</span>
           </div>
         </div>
       );
