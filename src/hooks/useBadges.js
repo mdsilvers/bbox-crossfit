@@ -4,6 +4,7 @@ import { BADGES, calculateStreakWeeks, checkBadges } from '../lib/badges';
 
 export function useBadges(currentUser) {
   const [myBadges, setMyBadges] = useState([]);
+  const [allUserBadges, setAllUserBadges] = useState({});
   const [streakWeeks, setStreakWeeks] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [newBadgeToast, setNewBadgeToast] = useState(null);
@@ -57,16 +58,29 @@ export function useBadges(currentUser) {
     }
   }, [currentUser, myBadges, bestStreak]);
 
+  const loadAllUserBadges = useCallback(async () => {
+    try {
+      const grouped = await db.getAllUserBadges();
+      setAllUserBadges(grouped);
+      return grouped;
+    } catch (error) {
+      console.error('Error loading all user badges:', error);
+      return {};
+    }
+  }, []);
+
   const dismissToast = useCallback(() => {
     setNewBadgeToast(null);
   }, []);
 
   return {
     myBadges,
+    allUserBadges,
     streakWeeks,
     bestStreak,
     newBadgeToast,
     loadMyBadges,
+    loadAllUserBadges,
     checkAndAwardBadges,
     dismissToast,
   };

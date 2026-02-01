@@ -470,6 +470,47 @@ function RecentPRs({ workoutResults, allWODs, onBenchmarkClick }) {
   );
 }
 
+// ====== Top Movements ======
+function TopMovements({ workoutResults }) {
+  const topMovements = useMemo(() => {
+    const movementCounts = {};
+    (workoutResults || []).forEach(result => {
+      result.movements.forEach(movement => {
+        if (movement.name) {
+          movementCounts[movement.name] = (movementCounts[movement.name] || 0) + 1;
+        }
+      });
+    });
+    return Object.entries(movementCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+  }, [workoutResults]);
+
+  if (topMovements.length === 0) return null;
+
+  return (
+    <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-4 mb-5 border border-slate-700/50">
+      <div className="flex items-center gap-2 mb-3">
+        <Flame className="w-4 h-4 text-orange-400" />
+        <h3 className="text-sm font-bold text-white uppercase tracking-wide">Most Common Movements</h3>
+      </div>
+      <div className="space-y-2">
+        {topMovements.map(([movement, count], idx) => (
+          <div key={idx} className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs">
+                {idx + 1}
+              </div>
+              <span className="text-white font-medium text-sm">{movement}</span>
+            </div>
+            <span className="text-slate-400 text-sm font-medium">{count}x</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ====== Main Progress Dashboard ======
 export default function ProgressDashboard({ currentUser, workoutResults, allAthleteResults, allWODs }) {
   const [selectedBenchmark, setSelectedBenchmark] = useState(null);
@@ -526,6 +567,9 @@ export default function ProgressDashboard({ currentUser, workoutResults, allAthl
         allWODs={allWODs}
         onBenchmarkClick={handleBenchmarkClick}
       />
+
+      {/* Top Movements */}
+      <TopMovements workoutResults={workoutResults} />
 
       {/* Body Composition */}
       <BodyComposition currentUser={currentUser} />

@@ -546,6 +546,22 @@ export async function awardBadge(userId, badgeKey) {
   return data;
 }
 
+export async function getAllUserBadges() {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .select('user_id, badge_key');
+
+  if (error) throw error;
+
+  // Group by user_id -> [badge_key, ...]
+  const grouped = {};
+  (data || []).forEach(row => {
+    if (!grouped[row.user_id]) grouped[row.user_id] = [];
+    grouped[row.user_id].push(row.badge_key);
+  });
+  return grouped;
+}
+
 export async function getAllRecentBadges(limit = 20) {
   const { data, error } = await supabase
     .from('user_badges')

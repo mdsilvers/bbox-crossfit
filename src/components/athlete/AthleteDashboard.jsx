@@ -10,6 +10,7 @@ import { calculateStats } from '../../lib/stats';
 import BBoxLogo from '../shared/BBoxLogo';
 import PhotoModal from '../shared/PhotoModal';
 import BadgeToast from '../social/BadgeToast';
+import BadgeIcons from '../social/BadgeIcons';
 import ProgressDashboard from '../ProgressDashboard';
 import ActivityFeed from '../social/ActivityFeed';
 import AthleteHomeDash from './AthleteHomeDash';
@@ -103,7 +104,10 @@ export default function AthleteDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <BBoxLogo className="w-14 h-7" />
-              <h1 className="text-xl font-semibold text-white">{currentUser.name}</h1>
+              <div>
+                <h1 className="text-xl font-semibold text-white">{currentUser.name}</h1>
+                <BadgeIcons earnedBadgeKeys={badges.myBadges} size="xs" />
+              </div>
             </div>
             <button
               onClick={onLogout}
@@ -142,6 +146,7 @@ export default function AthleteDashboard() {
               onToggleReaction={social.toggleReaction}
               onPostComment={social.postComment}
               onDeleteComment={social.removeComment}
+              loadReactionsForResults={social.loadReactionsForResults}
               myBadges={badges.myBadges}
               streakWeeks={badges.streakWeeks}
             />
@@ -183,7 +188,13 @@ export default function AthleteDashboard() {
 
           {/* Activity Feed View */}
           {currentView === 'feed' && (
-            <ActivityFeed currentUser={currentUser} allWODs={allWODs} />
+            <ActivityFeed
+              currentUser={currentUser}
+              allWODs={allWODs}
+              reactions={social.reactions}
+              onToggleReaction={social.toggleReaction}
+              loadReactionsForResults={social.loadReactionsForResults}
+            />
           )}
 
           {/* Workout View */}

@@ -7,7 +7,7 @@ const MEDAL_COLORS = {
   3: 'bg-amber-700 text-amber-100',
 };
 
-export default function LeaderboardRow({ rank, result, wodType, isCurrentUser }) {
+export default function LeaderboardRow({ rank, result, wodType, isCurrentUser, fistBumpCount = 0, hasFistBumped = false, onFistBump }) {
   const medalClass = MEDAL_COLORS[rank];
 
   return (
@@ -36,6 +36,25 @@ export default function LeaderboardRow({ rank, result, wodType, isCurrentUser })
           {isCurrentUser && <span className="text-red-400 ml-1 text-xs">(You)</span>}
         </span>
       </div>
+
+      {/* Fist bump - only for other athletes */}
+      {!isCurrentUser && onFistBump && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onFistBump(result.id, 'fist_bump');
+          }}
+          className={`flex-shrink-0 inline-flex items-center gap-0.5 px-1.5 py-1 rounded-full text-xs transition-colors ${
+            hasFistBumped
+              ? 'bg-red-600/20 border border-red-600/40 text-white'
+              : 'bg-slate-700/50 border border-slate-600/30 text-slate-400 hover:text-white hover:border-slate-500'
+          }`}
+          title="Fist Bump"
+        >
+          <span className="text-xs">{'\u{1F44A}'}</span>
+          {fistBumpCount > 0 && <span className="font-medium">{fistBumpCount}</span>}
+        </button>
+      )}
 
       {/* RX Badge */}
       <span className={`text-xs px-1.5 py-0.5 rounded font-semibold flex-shrink-0 ${

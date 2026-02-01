@@ -10,6 +10,7 @@ import { calculateStats } from '../../lib/stats';
 import BBoxLogo from '../shared/BBoxLogo';
 import PhotoModal from '../shared/PhotoModal';
 import BadgeToast from '../social/BadgeToast';
+import BadgeIcons from '../social/BadgeIcons';
 import ActivityFeed from '../social/ActivityFeed';
 import CoachHomeDash from './CoachHomeDash';
 import CoachHistoryView from './CoachHistoryView';
@@ -101,6 +102,7 @@ export default function CoachDashboard() {
       setBenchmarkPRs(prs);
       loadAllResults();
       await badgesHook.loadMyBadges();
+      await badgesHook.loadAllUserBadges();
       await badgesHook.checkAndAwardBadges(myResults, wods, prs);
       const resultIds = myResults.slice(0, 10).map(r => r.id);
       if (resultIds.length > 0) {
@@ -144,7 +146,10 @@ export default function CoachDashboard() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <BBoxLogo className="w-14 h-7" />
-              <h1 className="text-xl font-semibold text-white">{currentUser.name}</h1>
+              <div>
+                <h1 className="text-xl font-semibold text-white">{currentUser.name}</h1>
+                <BadgeIcons earnedBadgeKeys={badgesHook.myBadges} size="xs" />
+              </div>
             </div>
             <button
               onClick={onLogout}
@@ -187,6 +192,7 @@ export default function CoachDashboard() {
               onToggleReaction={social.toggleReaction}
               onPostComment={social.postComment}
               onDeleteComment={social.removeComment}
+              loadReactionsForResults={social.loadReactionsForResults}
               myBadges={badgesHook.myBadges}
               streakWeeks={badgesHook.streakWeeks}
             />
@@ -303,6 +309,7 @@ export default function CoachDashboard() {
               allAthleteResults={allAthleteResults}
               allWODs={allWODs}
               currentUser={currentUser}
+              allUserBadges={badgesHook.allUserBadges}
               photoModalUrl={photoModalUrl}
               setPhotoModalUrl={setPhotoModalUrl}
               reactions={social.reactions}
@@ -317,7 +324,13 @@ export default function CoachDashboard() {
 
           {/* Activity Feed View */}
           {coachView === 'feed' && (
-            <ActivityFeed currentUser={currentUser} allWODs={allWODs} />
+            <ActivityFeed
+              currentUser={currentUser}
+              allWODs={allWODs}
+              reactions={social.reactions}
+              onToggleReaction={social.toggleReaction}
+              loadReactionsForResults={social.loadReactionsForResults}
+            />
           )}
         </div>
 

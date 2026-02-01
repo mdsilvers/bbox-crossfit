@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trophy } from 'lucide-react';
 import { useLeaderboard } from '../../hooks/useLeaderboard';
 import LeaderboardRow from './LeaderboardRow';
 
-export default function Leaderboard({ date, wodType, wodName, currentUserId }) {
+export default function Leaderboard({ date, wodType, wodName, currentUserId, reactions = {}, onToggleReaction, loadReactionsForResults }) {
   const { leaderboardResults, loading, genderFilter, setGenderFilter } = useLeaderboard(date, wodType);
   const [expanded, setExpanded] = useState(false);
+
+  // Load reactions for leaderboard results
+  useEffect(() => {
+    if (leaderboardResults.length > 0 && loadReactionsForResults) {
+      const ids = leaderboardResults.map(r => r.id);
+      loadReactionsForResults(ids);
+    }
+  }, [leaderboardResults.length]);
 
   if (loading && leaderboardResults.length === 0) {
     return null;
@@ -52,15 +60,23 @@ export default function Leaderboard({ date, wodType, wodName, currentUserId }) {
 
       {/* Results */}
       <div className="space-y-1">
-        {displayResults.map((result, idx) => (
-          <LeaderboardRow
-            key={result.id}
-            rank={idx + 1}
-            result={result}
-            wodType={wodType}
-            isCurrentUser={result.athleteId === currentUserId}
-          />
-        ))}
+        {displayResults.map((result, idx) => {
+          const resultReactions = reactions[result.id] || [];
+          const fistBumps = resultReactions.filter(r => r.reaction_type === 'fist_bump');
+
+          return (
+            <LeaderboardRow
+              key={result.id}
+              rank={idx + 1}
+              result={result}
+              wodType={wodType}
+              isCurrentUser={result.athleteId === currentUserId}
+              fistBumpCount={fistBumps.length}
+              hasFistBumped={fistBumps.some(r => r.user_id === currentUserId)}
+              onFistBump={onToggleReaction}
+            />
+          );
+        })}
       </div>
 
       {/* Show More / Less */}

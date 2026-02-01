@@ -4,11 +4,13 @@ import { formatScore } from '../../lib/score-utils';
 import { isBenchmarkWod } from '../../lib/benchmarks';
 import ReactionBar from '../social/ReactionBar';
 import CommentThread from '../social/CommentThread';
+import BadgeIcons from '../social/BadgeIcons';
 
 export default function CoachAthleteList({
   allAthleteResults,
   allWODs,
   currentUser,
+  allUserBadges = {},
   photoModalUrl,
   setPhotoModalUrl,
   reactions = {},
@@ -40,6 +42,7 @@ export default function CoachAthleteList({
       athleteData[result.athleteEmail] = {
         name: result.athleteName,
         email: result.athleteEmail,
+        userId: result.athleteId,
         workouts: []
       };
     }
@@ -101,6 +104,7 @@ export default function CoachAthleteList({
                     </div>
                     <div>
                       <h3 className="text-white font-bold">{athlete.name}</h3>
+                      <BadgeIcons earnedBadgeKeys={allUserBadges[athlete.userId] || []} size="xs" />
                       {athlete.daysAgo !== null && (
                         <p className="text-slate-400 text-xs">
                           {athlete.daysAgo === 0 ? 'Trained today' :
@@ -247,6 +251,7 @@ export default function CoachAthleteList({
                               reactions={reactions[workout.id] || []}
                               currentUserId={currentUser.id}
                               onToggleReaction={onToggleReaction}
+                              isOwnResult={false}
                             />
                             <CommentThread
                               resultId={workout.id}

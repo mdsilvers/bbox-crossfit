@@ -208,6 +208,7 @@ export default function CoachHistoryView({
                         reactions={reactions[result.id] || []}
                         currentUserId={currentUser.id}
                         onToggleReaction={onToggleReaction}
+                        isOwnResult={true}
                       />
                       <CommentThread
                         resultId={result.id}

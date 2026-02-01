@@ -5,7 +5,6 @@ import { isBenchmarkWod } from '../../lib/benchmarks';
 import Leaderboard from '../social/Leaderboard';
 import ReactionBar from '../social/ReactionBar';
 import CommentThread from '../social/CommentThread';
-import BadgeDisplay from '../social/BadgeDisplay';
 import StreakBadge from '../social/StreakBadge';
 
 export default function AthleteHomeDash({
@@ -31,6 +30,7 @@ export default function AthleteHomeDash({
   onToggleReaction,
   onPostComment,
   onDeleteComment,
+  loadReactionsForResults,
   myBadges = [],
   streakWeeks = 0,
 }) {
@@ -103,9 +103,6 @@ export default function AthleteHomeDash({
           )}
         </div>
       )}
-
-      {/* Badges */}
-      <BadgeDisplay earnedBadgeKeys={myBadges} />
 
       {/* Quick Action - Today's WOD Status */}
       {todayWOD && myResult.isCustomResult ? (
@@ -303,6 +300,9 @@ export default function AthleteHomeDash({
           wodType={todayWOD.type}
           wodName={todayWOD.name}
           currentUserId={currentUser.id}
+          reactions={reactions}
+          onToggleReaction={onToggleReaction}
+          loadReactionsForResults={loadReactionsForResults}
         />
       )}
 
@@ -358,26 +358,6 @@ export default function AthleteHomeDash({
                     Log
                   </button>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Top Movements */}
-      {stats.topMovements.length > 0 && (
-        <div className="bg-slate-800 rounded-2xl p-5 sm:p-6 mb-6 border border-slate-700">
-          <h3 className="text-lg font-bold text-white mb-5">Most Common Movements</h3>
-          <div className="space-y-4">
-            {stats.topMovements.map(([movement, count], idx) => (
-              <div key={idx} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
-                    {idx + 1}
-                  </div>
-                  <span className="text-white font-medium">{movement}</span>
-                </div>
-                <span className="text-slate-400 font-medium">{count}x</span>
               </div>
             ))}
           </div>
@@ -550,6 +530,7 @@ export default function AthleteHomeDash({
                           reactions={reactions[result.id] || []}
                           currentUserId={currentUser.id}
                           onToggleReaction={onToggleReaction}
+                          isOwnResult={true}
                         />
                         <CommentThread
                           resultId={result.id}
