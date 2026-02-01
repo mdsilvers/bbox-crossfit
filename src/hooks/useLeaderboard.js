@@ -58,18 +58,22 @@ export function useLeaderboard(date, wodType, wodId) {
     };
   }, [date, wodId]);
 
-  // Filter and sort results
-  const filteredResults = results
-    .filter(r => {
-      if (genderFilter === 'all') return true;
-      return r.groupType === genderFilter;
-    })
-    // Exclude results with no score
+  // Filter by gender, then split into ranked (has score) and unranked (no score)
+  const genderFiltered = results.filter(r => {
+    if (genderFilter === 'all') return true;
+    return r.groupType === genderFilter;
+  });
+  const ranked = genderFiltered
     .filter(r => r.time)
     .sort((a, b) => compareScores(a.time, b.time, wodType));
+  const unranked = genderFiltered.filter(r => !r.time);
+  const filteredResults = [...ranked, ...unranked];
+  const rankedCount = ranked.length;
 
   return {
     leaderboardResults: filteredResults,
+    rankedCount,
+    totalParticipants: results.length,
     loading,
     genderFilter,
     setGenderFilter,

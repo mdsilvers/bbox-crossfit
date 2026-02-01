@@ -4,7 +4,7 @@ import { useLeaderboard } from '../../hooks/useLeaderboard';
 import LeaderboardRow from './LeaderboardRow';
 
 export default function Leaderboard({ date, wodType, wodName, wodId, currentUserId, reactions = {}, onToggleReaction, loadReactionsForResults }) {
-  const { leaderboardResults, loading, genderFilter, setGenderFilter } = useLeaderboard(date, wodType, wodId);
+  const { leaderboardResults, rankedCount, loading, genderFilter, setGenderFilter } = useLeaderboard(date, wodType, wodId);
   const [expanded, setExpanded] = useState(false);
 
   // Load reactions for leaderboard results
@@ -61,19 +61,18 @@ export default function Leaderboard({ date, wodType, wodName, wodId, currentUser
       {/* Results */}
       <div className="space-y-1">
         {displayResults.map((result, idx) => {
-          const resultReactions = reactions[result.id] || [];
-          const fistBumps = resultReactions.filter(r => r.reaction_type === 'fist_bump');
+          const isRanked = idx < rankedCount;
 
           return (
             <LeaderboardRow
               key={result.id}
-              rank={idx + 1}
+              rank={isRanked ? idx + 1 : null}
               result={result}
               wodType={wodType}
               isCurrentUser={result.athleteId === currentUserId}
-              fistBumpCount={fistBumps.length}
-              hasFistBumped={fistBumps.some(r => r.user_id === currentUserId)}
-              onFistBump={onToggleReaction}
+              reactions={reactions[result.id] || []}
+              currentUserId={currentUserId}
+              onToggleReaction={onToggleReaction}
             />
           );
         })}

@@ -31,7 +31,7 @@ export default function PostWodSummary({
 
   const showLeaderboard = !isCustomWorkout && wod && isRankable(wodType);
 
-  const { leaderboardResults, loading, genderFilter, setGenderFilter } =
+  const { leaderboardResults, rankedCount, totalParticipants, loading, genderFilter, setGenderFilter } =
     useLeaderboard(showLeaderboard ? date : null, wodType, wod?.id);
 
   // Load reactions for leaderboard results
@@ -49,15 +49,12 @@ export default function PostWodSummary({
     return () => { document.body.style.overflow = original; };
   }, []);
 
-  // Count participation (all results for this date, excluding custom)
-  const participationCount = leaderboardResults.length;
+  // Count participation (all results for this WOD, including those without a score)
+  const participationCount = totalParticipants;
 
-  // Find user's rank
-  const userRank = leaderboardResults.findIndex(r => r.athleteId === currentUser.id) + 1;
-  const userInTop5 = userRank > 0 && userRank <= 5;
-  const userResult = leaderboardResults.find(r => r.athleteId === currentUser.id);
-
-  const displayResults = leaderboardResults.slice(0, 5);
+  // Find user's rank (only within ranked results)
+  const userIdx = leaderboardResults.findIndex(r => r.athleteId === currentUser.id);
+  const userRank = userIdx >= 0 && userIdx < rankedCount ? userIdx + 1 : 0;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" style={{ backgroundColor: 'rgba(28, 32, 39, 0.95)' }}>
@@ -226,50 +223,25 @@ export default function PostWodSummary({
               ))}
             </div>
 
-            {/* Top 5 */}
+            {/* All athletes */}
             <div className="space-y-1">
-              {displayResults.map((r, idx) => {
-                const resultReactions = reactions[r.id] || [];
-                const fistBumps = resultReactions.filter(rx => rx.reaction_type === 'fist_bump');
+              {leaderboardResults.map((r, idx) => {
+                const isRanked = idx < rankedCount;
 
                 return (
                   <LeaderboardRow
                     key={r.id}
-                    rank={idx + 1}
+                    rank={isRanked ? idx + 1 : null}
                     result={r}
                     wodType={wodType}
                     isCurrentUser={r.athleteId === currentUser.id}
-                    fistBumpCount={fistBumps.length}
-                    hasFistBumped={fistBumps.some(rx => rx.user_id === currentUser.id)}
-                    onFistBump={onToggleReaction}
+                    reactions={reactions[r.id] || []}
+                    currentUserId={currentUser.id}
+                    onToggleReaction={onToggleReaction}
                   />
                 );
               })}
             </div>
-
-            {/* User's rank if outside top 5 */}
-            {userRank > 5 && userResult && (
-              <>
-                <div className="border-t border-slate-700 my-2"></div>
-                <div className="space-y-1">
-                  {(() => {
-                    const resultReactions = reactions[userResult.id] || [];
-                    const fistBumps = resultReactions.filter(rx => rx.reaction_type === 'fist_bump');
-                    return (
-                      <LeaderboardRow
-                        rank={userRank}
-                        result={userResult}
-                        wodType={wodType}
-                        isCurrentUser={true}
-                        fistBumpCount={fistBumps.length}
-                        hasFistBumped={fistBumps.some(rx => rx.user_id === currentUser.id)}
-                        onFistBump={onToggleReaction}
-                      />
-                    );
-                  })()}
-                </div>
-              </>
-            )}
           </div>
         )}
 
