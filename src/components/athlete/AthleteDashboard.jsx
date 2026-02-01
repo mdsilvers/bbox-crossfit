@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, Clock, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useResults } from '../../hooks/useResults';
@@ -82,7 +82,7 @@ export default function AthleteDashboard() {
 
   return (
     <div className="min-h-screen min-h-dvh bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="max-w-2xl mx-auto pb-8">
+      <div className="max-w-2xl mx-auto pb-24">
         {/* Header */}
         <div className="sticky top-0 bg-slate-900 z-10 px-4 py-4 border-b border-slate-700">
           <div className="flex items-center justify-between">
@@ -100,50 +100,7 @@ export default function AthleteDashboard() {
         </div>
 
         {/* Main Content */}
-        <div className="px-4 pt-3 pb-4">
-          {/* Navigation Tabs */}
-          <div className="flex gap-2 mb-5">
-            <button
-              onClick={() => setCurrentView('dashboard')}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all text-sm ${
-                currentView === 'dashboard'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => setCurrentView('workout')}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all text-sm ${
-                currentView === 'workout'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              Today's WOD
-            </button>
-            <button
-              onClick={() => setCurrentView('history')}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all text-sm ${
-                currentView === 'history'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              History
-            </button>
-            <button
-              onClick={() => setCurrentView('progress')}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all text-sm ${
-                currentView === 'progress'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:text-white'
-              }`}
-            >
-              Progress
-            </button>
-          </div>
+        <div className="px-4 py-4">
 
           {/* Dashboard View */}
           {currentView === 'dashboard' && (
@@ -238,6 +195,41 @@ export default function AthleteDashboard() {
               navigate={navigate}
             />
           )}
+        </div>
+
+        {/* Bottom Navigation */}
+        <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-700 safe-area-inset-bottom">
+          <div className="max-w-2xl mx-auto grid grid-cols-3 text-center">
+            <button
+              onClick={() => setCurrentView('dashboard')}
+              className={`py-3 flex flex-col items-center gap-1 ${
+                currentView === 'dashboard' ? 'text-red-500' : 'text-slate-400'
+              }`}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <span className="text-xs">Home</span>
+            </button>
+            <button
+              onClick={() => setCurrentView('history')}
+              className={`py-3 flex flex-col items-center gap-1 ${
+                currentView === 'history' ? 'text-red-500' : 'text-slate-400'
+              }`}
+            >
+              <Clock className="w-6 h-6" />
+              <span className="text-xs">History</span>
+            </button>
+            <button
+              onClick={() => setCurrentView('progress')}
+              className={`py-3 flex flex-col items-center gap-1 ${
+                currentView === 'progress' ? 'text-red-500' : 'text-slate-400'
+              }`}
+            >
+              <TrendingUp className="w-6 h-6" />
+              <span className="text-xs">Progress</span>
+            </button>
+          </div>
         </div>
       </div>
 
