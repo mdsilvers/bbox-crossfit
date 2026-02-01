@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import * as db from '../lib/database';
 import { compareScores } from '../lib/score-utils';
 
-export function useLeaderboard(date, wodType) {
+export function useLeaderboard(date, wodType, wodId) {
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [genderFilter, setGenderFilter] = useState('all');
@@ -13,7 +13,7 @@ export function useLeaderboard(date, wodType) {
     if (!date) return;
     setLoading(true);
     try {
-      const data = await db.getLeaderboardForDate(date);
+      const data = await db.getLeaderboardForDate(date, wodId);
       setResults(data);
     } catch (error) {
       console.error('Error loading leaderboard:', error);
@@ -56,7 +56,7 @@ export function useLeaderboard(date, wodType) {
         channelRef.current = null;
       }
     };
-  }, [date]);
+  }, [date, wodId]);
 
   // Filter and sort results
   const filteredResults = results

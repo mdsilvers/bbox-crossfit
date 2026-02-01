@@ -24,6 +24,7 @@ export default function AthleteHistoryView({
   onDeleteComment,
   loadReactionsForResults,
   loadCommentsForResults,
+  showWorkoutSummary,
 }) {
   const [historySearch, setHistorySearch] = useState('');
 
@@ -137,7 +138,7 @@ export default function AthleteHistoryView({
                   {showDeleteConfirm !== result.id && (
                     <>
                       <div
-                        onClick={() => editPastWorkout(result)}
+                        onClick={() => showWorkoutSummary(result)}
                         className="p-4 active:bg-slate-700 transition-colors cursor-pointer"
                       >
                         {/* Header: WOD Name + Type */}

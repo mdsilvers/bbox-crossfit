@@ -33,6 +33,7 @@ export default function AthleteHomeDash({
   loadReactionsForResults,
   myBadges = [],
   streakWeeks = 0,
+  showWorkoutSummary,
 }) {
   return (
     <>
@@ -299,6 +300,7 @@ export default function AthleteHomeDash({
           date={todayWOD.date}
           wodType={todayWOD.type}
           wodName={todayWOD.name}
+          wodId={todayWOD.id}
           currentUserId={currentUser.id}
           reactions={reactions}
           onToggleReaction={onToggleReaction}
@@ -440,7 +442,8 @@ export default function AthleteHomeDash({
                   {showDeleteConfirm !== result.id && (
                     <>
                       <div
-                        className="p-5"
+                        className="p-5 cursor-pointer active:bg-slate-700 transition-colors"
+                        onClick={() => showWorkoutSummary(result)}
                       >
                         {/* Header: WOD Name + Type */}
                         <div className="flex items-start justify-between mb-3">

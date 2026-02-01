@@ -16,6 +16,7 @@ export function useResults(currentUser) {
   const [editingWorkout, setEditingWorkout] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
   const [isCustomWorkout, setIsCustomWorkout] = useState(false);
+  const [postWodSummaryData, setPostWodSummaryData] = useState(null);
   const [customWod, setCustomWod] = useState({
     name: '',
     type: 'For Time',
@@ -97,9 +98,11 @@ export function useResults(currentUser) {
     if (!todayWOD && !editingWorkout) return;
 
     const workoutDate = editingWorkout ? editingWorkout.date : todayWOD.date;
+    const wodId = editingWorkout?.wodId || todayWOD?.id;
+    const wasUpdate = !!myResult.existingResultId;
 
     const resultData = {
-      wodId: editingWorkout?.wodId || todayWOD?.id,
+      wodId,
       date: workoutDate,
       time: myResult.time,
       movements: myResult.movements,
@@ -109,13 +112,23 @@ export function useResults(currentUser) {
     };
 
     try {
+      let savedRow;
       if (myResult.existingResultId) {
-        await db.updateResult(myResult.existingResultId, resultData);
-        alert('Workout updated! Great job!');
+        savedRow = await db.updateResult(myResult.existingResultId, resultData);
       } else {
-        await db.createResult(resultData, currentUser.id, currentUser.name, currentUser.email);
-        alert('Workout logged! Great job!');
+        savedRow = await db.createResult(resultData, currentUser.id, currentUser.name, currentUser.email);
       }
+
+      const savedResult = db.resultToAppFormat(savedRow);
+      const matchingWod = allWODs.find(w => w.id === wodId) || todayWOD;
+
+      setPostWodSummaryData({
+        result: savedResult,
+        wod: matchingWod,
+        isCustomWorkout: false,
+        isUpdate: wasUpdate,
+        mode: 'post-log',
+      });
 
       const results = await loadMyResults();
 
@@ -147,6 +160,7 @@ export function useResults(currentUser) {
     }
 
     const today = new Date().toISOString().split('T')[0];
+    const wasUpdate = !!myResult.existingResultId;
 
     const resultData = {
       wodId: null,
@@ -161,13 +175,22 @@ export function useResults(currentUser) {
     };
 
     try {
+      let savedRow;
       if (myResult.existingResultId) {
-        await db.updateResult(myResult.existingResultId, resultData);
-        alert('Custom workout updated!');
+        savedRow = await db.updateResult(myResult.existingResultId, resultData);
       } else {
-        await db.createResult(resultData, currentUser.id, currentUser.name, currentUser.email);
-        alert('Custom workout logged! Great job!');
+        savedRow = await db.createResult(resultData, currentUser.id, currentUser.name, currentUser.email);
       }
+
+      const savedResult = db.resultToAppFormat(savedRow);
+
+      setPostWodSummaryData({
+        result: savedResult,
+        wod: null,
+        isCustomWorkout: true,
+        isUpdate: wasUpdate,
+        mode: 'post-log',
+      });
 
       const results = await loadMyResults();
 
@@ -350,6 +373,18 @@ export function useResults(currentUser) {
     setShowCustomMovementDropdown(newDropdowns);
   };
 
+  const showWorkoutSummary = (result, allWODs = []) => {
+    const isCustom = !!(result.customWodName || result.customWodType);
+    const wod = isCustom ? null : allWODs.find(w => w.date === result.date) || null;
+    setPostWodSummaryData({
+      result,
+      wod,
+      isCustomWorkout: isCustom,
+      isUpdate: false,
+      mode: 'detail',
+    });
+  };
+
   return {
     workoutResults, setWorkoutResults,
     allAthleteResults, setAllAthleteResults,
@@ -362,6 +397,7 @@ export function useResults(currentUser) {
     showCustomMovementDropdown, setShowCustomMovementDropdown,
     customWodNameError, setCustomWodNameError,
     photoModalUrl, setPhotoModalUrl,
+    postWodSummaryData, setPostWodSummaryData,
     loadMyResults,
     loadAllResults,
     logResult,
@@ -379,5 +415,6 @@ export function useResults(currentUser) {
     updateCustomMovement,
     handleCustomMovementInput,
     selectCustomMovement,
+    showWorkoutSummary,
   };
 }

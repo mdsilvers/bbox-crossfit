@@ -24,6 +24,7 @@ export default function CoachHistoryView({
   onDeleteComment,
   loadReactionsForResults,
   loadCommentsForResults,
+  showWorkoutSummary,
 }) {
   const [coachHistorySearch, setCoachHistorySearch] = useState('');
 
@@ -97,7 +98,9 @@ export default function CoachHistoryView({
           <p className="text-slate-400 text-sm">{filteredWorkouts.length} workout{filteredWorkouts.length !== 1 ? 's' : ''} found</p>
           {filteredWorkouts.map((result) => {
             const wod = allWODs.find(w => w.date === result.date);
-            const completedCount = allAthleteResults.filter(r => r.date === result.date).length;
+            const completedCount = result.wodId
+              ? allAthleteResults.filter(r => r.wodId === result.wodId).length
+              : 1;
 
             return (
               <div
@@ -128,7 +131,7 @@ export default function CoachHistoryView({
                 {showDeleteConfirm !== result.id && (
                   <>
                     <div
-                      onClick={() => editPastWorkout(result)}
+                      onClick={() => showWorkoutSummary(result)}
                       className="p-4 active:bg-slate-700 transition-colors cursor-pointer"
                     >
                       <div className="flex items-start justify-between mb-2">

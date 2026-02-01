@@ -425,11 +425,17 @@ export async function deleteBodyMeasurement(id) {
 
 // ==================== LEADERBOARD FUNCTIONS ====================
 
-export async function getLeaderboardForDate(date) {
-  const { data, error } = await supabase
+export async function getLeaderboardForDate(date, wodId) {
+  let query = supabase
     .from('results')
     .select('*, profiles!athlete_id(group_type)')
     .eq('date', date);
+
+  if (wodId) {
+    query = query.eq('wod_id', wodId);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return (data || []).map(r => ({

@@ -9,6 +9,7 @@ import { useBadges } from '../../hooks/useBadges';
 import { calculateStats } from '../../lib/stats';
 import BBoxLogo from '../shared/BBoxLogo';
 import PhotoModal from '../shared/PhotoModal';
+import PostWodSummary from '../shared/PostWodSummary';
 import BadgeToast from '../social/BadgeToast';
 import BadgeIcons from '../social/BadgeIcons';
 import ActivityFeed from '../social/ActivityFeed';
@@ -67,6 +68,8 @@ export default function CoachDashboard() {
     showCustomMovementDropdown, setShowCustomMovementDropdown,
     customWodNameError, setCustomWodNameError,
     photoModalUrl, setPhotoModalUrl,
+    postWodSummaryData, setPostWodSummaryData,
+    showWorkoutSummary,
     loadMyResults,
     loadAllResults,
     logResult,
@@ -126,7 +129,6 @@ export default function CoachDashboard() {
     const prs = calculateBenchmarkPRs(freshResults, allWODs);
     setBenchmarkPRs(prs);
     await badgesHook.checkAndAwardBadges(freshResults, allWODs, prs);
-    navigate('dashboard');
   };
 
   // Callback after custom workout logging
@@ -135,7 +137,6 @@ export default function CoachDashboard() {
     const prs = calculateBenchmarkPRs(freshResults, allWODs);
     setBenchmarkPRs(prs);
     await badgesHook.checkAndAwardBadges(freshResults, allWODs, prs);
-    navigate('dashboard');
   };
 
   return (
@@ -195,6 +196,7 @@ export default function CoachDashboard() {
               loadReactionsForResults={social.loadReactionsForResults}
               myBadges={badgesHook.myBadges}
               streakWeeks={badgesHook.streakWeeks}
+              showWorkoutSummary={(result) => showWorkoutSummary(result, allWODs)}
             />
           )}
 
@@ -222,6 +224,7 @@ export default function CoachDashboard() {
               onDeleteComment={social.removeComment}
               loadReactionsForResults={social.loadReactionsForResults}
               loadCommentsForResults={social.loadCommentsForResults}
+              showWorkoutSummary={(result) => showWorkoutSummary(result, allWODs)}
             />
           )}
 
@@ -393,6 +396,26 @@ export default function CoachDashboard() {
 
       {/* Badge Toast */}
       <BadgeToast badge={badgesHook.newBadgeToast} onDismiss={badgesHook.dismissToast} />
+
+      {/* Post-WOD Summary Overlay */}
+      {postWodSummaryData && (
+        <PostWodSummary
+          result={postWodSummaryData.result}
+          wod={postWodSummaryData.wod}
+          isUpdate={postWodSummaryData.isUpdate}
+          isCustomWorkout={postWodSummaryData.isCustomWorkout}
+          mode={postWodSummaryData.mode}
+          currentUser={currentUser}
+          reactions={social.reactions}
+          onToggleReaction={social.toggleReaction}
+          loadReactionsForResults={social.loadReactionsForResults}
+          onDismiss={() => {
+            const wasPostLog = postWodSummaryData.mode === 'post-log';
+            setPostWodSummaryData(null);
+            if (wasPostLog) navigate('dashboard');
+          }}
+        />
+      )}
     </div>
   );
 }

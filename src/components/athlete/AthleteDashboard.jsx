@@ -9,6 +9,7 @@ import { useBadges } from '../../hooks/useBadges';
 import { calculateStats } from '../../lib/stats';
 import BBoxLogo from '../shared/BBoxLogo';
 import PhotoModal from '../shared/PhotoModal';
+import PostWodSummary from '../shared/PostWodSummary';
 import BadgeToast from '../social/BadgeToast';
 import BadgeIcons from '../social/BadgeIcons';
 import ProgressDashboard from '../ProgressDashboard';
@@ -40,6 +41,8 @@ export default function AthleteDashboard() {
     showCustomMovementDropdown, setShowCustomMovementDropdown,
     customWodNameError, setCustomWodNameError,
     photoModalUrl, setPhotoModalUrl,
+    postWodSummaryData, setPostWodSummaryData,
+    showWorkoutSummary,
     loadMyResults,
     logResult,
     logCustomWorkout,
@@ -149,6 +152,7 @@ export default function AthleteDashboard() {
               loadReactionsForResults={social.loadReactionsForResults}
               myBadges={badges.myBadges}
               streakWeeks={badges.streakWeeks}
+              showWorkoutSummary={(result) => showWorkoutSummary(result, allWODs)}
             />
           )}
 
@@ -173,6 +177,7 @@ export default function AthleteDashboard() {
               onDeleteComment={social.removeComment}
               loadReactionsForResults={social.loadReactionsForResults}
               loadCommentsForResults={social.loadCommentsForResults}
+              showWorkoutSummary={(result) => showWorkoutSummary(result, allWODs)}
             />
           )}
 
@@ -225,7 +230,6 @@ export default function AthleteDashboard() {
                 const prs = calculateBenchmarkPRs(results, allWODs);
                 setBenchmarkPRs(prs);
                 await badges.checkAndAwardBadges(results, allWODs, prs);
-                navigate('dashboard');
               })}
               startCustomWorkout={() => startCustomWorkout(navigate)}
               cancelCustomWorkout={() => cancelCustomWorkout(navigate)}
@@ -285,6 +289,22 @@ export default function AthleteDashboard() {
 
       {/* Badge Toast */}
       <BadgeToast badge={badges.newBadgeToast} onDismiss={badges.dismissToast} />
+
+      {/* Post-WOD Summary Overlay */}
+      {postWodSummaryData && (
+        <PostWodSummary
+          result={postWodSummaryData.result}
+          wod={postWodSummaryData.wod}
+          isUpdate={postWodSummaryData.isUpdate}
+          isCustomWorkout={postWodSummaryData.isCustomWorkout}
+          mode={postWodSummaryData.mode}
+          currentUser={currentUser}
+          reactions={social.reactions}
+          onToggleReaction={social.toggleReaction}
+          loadReactionsForResults={social.loadReactionsForResults}
+          onDismiss={() => setPostWodSummaryData(null)}
+        />
+      )}
     </div>
   );
 }

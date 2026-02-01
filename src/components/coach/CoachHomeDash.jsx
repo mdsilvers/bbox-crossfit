@@ -35,6 +35,7 @@ export default function CoachHomeDash({
   loadReactionsForResults,
   myBadges = [],
   streakWeeks = 0,
+  showWorkoutSummary,
 }) {
   return (
     <>
@@ -232,9 +233,8 @@ export default function CoachHomeDash({
                   </span>
                 )}
                 {(() => {
-                  const today = new Date().toISOString().split('T')[0];
                   const athletesCompleted = allAthleteResults.filter(r =>
-                    r.date === today && r.athleteEmail !== currentUser.email
+                    r.wodId === todayWOD.id && r.athleteEmail !== currentUser.email
                   ).length;
                   return athletesCompleted > 0 && (
                     <span className="text-slate-400 text-xs">
@@ -343,6 +343,7 @@ export default function CoachHomeDash({
           date={todayWOD.date}
           wodType={todayWOD.type}
           wodName={todayWOD.name}
+          wodId={todayWOD.id}
           currentUserId={currentUser.id}
           reactions={reactions}
           onToggleReaction={onToggleReaction}
@@ -448,7 +449,9 @@ export default function CoachHomeDash({
               .slice(0, 5)
               .map((result) => {
                 const wod = allWODs.find(w => w.date === result.date);
-                const completedCount = allAthleteResults.filter(r => r.date === result.date).length;
+                const completedCount = result.wodId
+                  ? allAthleteResults.filter(r => r.wodId === result.wodId).length
+                  : 1;
 
                 return (
                   <div
@@ -479,7 +482,8 @@ export default function CoachHomeDash({
                     {showDeleteConfirm !== result.id && (
                       <>
                         <div
-                          className="p-4"
+                          className="p-4 cursor-pointer active:bg-slate-600 transition-colors"
+                          onClick={() => showWorkoutSummary(result)}
                         >
                           {/* Header: WOD Name + Type + Time */}
                           <div className="flex items-start justify-between mb-2">
