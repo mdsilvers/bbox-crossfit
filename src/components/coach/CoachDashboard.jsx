@@ -70,6 +70,7 @@ export default function CoachDashboard() {
     photoModalUrl, setPhotoModalUrl,
     postWodSummaryData, setPostWodSummaryData,
     showWorkoutSummary,
+    showWodReview,
     loadMyResults,
     loadAllResults,
     logResult,
@@ -277,6 +278,7 @@ export default function CoachDashboard() {
               allWODs={allWODs}
               workoutResults={workoutResults}
               allAthleteResults={allAthleteResults}
+              showWodReview={showWodReview}
               showWODForm={showWODForm}
               setShowWODForm={setShowWODForm}
               newWOD={newWOD}
@@ -321,6 +323,7 @@ export default function CoachDashboard() {
               allAthleteResults={allAthleteResults}
               allWODs={allWODs}
               currentUser={currentUser}
+              showWorkoutSummary={(result) => showWorkoutSummary(result, allWODs)}
               allUserBadges={badgesHook.allUserBadges}
               photoModalUrl={photoModalUrl}
               setPhotoModalUrl={setPhotoModalUrl}

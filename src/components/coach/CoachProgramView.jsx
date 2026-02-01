@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Trash2, Dumbbell, Calendar } from 'lucide-react';
+import { Plus, Trash2, Dumbbell, Calendar, Users } from 'lucide-react';
 import { isBenchmarkWod, getBenchmarkByName, getBenchmarksByCategory } from '../../lib/benchmarks';
 import { STANDARD_MOVEMENTS } from '../../lib/constants';
 
@@ -8,6 +8,7 @@ export default function CoachProgramView({
   allWODs,
   workoutResults,
   allAthleteResults,
+  showWodReview,
   showWODForm,
   setShowWODForm,
   newWOD,
@@ -82,6 +83,8 @@ export default function CoachProgramView({
                 const coachHasResult = workoutResults.find(r =>
                   r.date === wod.date && r.athleteEmail === currentUser.email
                 );
+                const completedCount = allAthleteResults.filter(r => r.wodId === wod.id).length;
+                const isTappable = completedCount > 0 && showWodReview;
 
                 return (
                   <div
@@ -117,7 +120,10 @@ export default function CoachProgramView({
                     {/* Main Card Content */}
                     {showDeleteWODConfirm?.id !== wod.id && (
                       <>
-                    <div className="p-4">
+                    <div
+                      className={`p-4${isTappable ? ' cursor-pointer active:bg-slate-700 transition-colors' : ''}`}
+                      onClick={isTappable ? () => showWodReview(wod) : undefined}
+                    >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           {wod.name && (
@@ -178,6 +184,14 @@ export default function CoachProgramView({
                       {wod.notes && (
                         <div className="bg-slate-700 rounded p-2 text-slate-300 text-xs mb-3">
                           {wod.notes}
+                        </div>
+                      )}
+
+                      {/* Completion count indicator */}
+                      {completedCount > 0 && (
+                        <div className="flex items-center gap-2 text-slate-400 text-xs">
+                          <Users className="w-3.5 h-3.5 text-green-400" />
+                          <span>{completedCount} athlete{completedCount !== 1 ? 's' : ''} completed</span>
                         </div>
                       )}
                     </div>

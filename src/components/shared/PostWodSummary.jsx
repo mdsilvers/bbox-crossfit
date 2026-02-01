@@ -23,11 +23,11 @@ export default function PostWodSummary({
   loadReactionsForResults,
   onDismiss,
 }) {
-  const wodType = isCustomWorkout ? result.customWodType : wod?.type;
+  const wodType = isCustomWorkout ? result?.customWodType : wod?.type;
   const wodName = isCustomWorkout
-    ? (result.customWodName || 'Custom Workout')
+    ? (result?.customWodName || 'Custom Workout')
     : (wod?.name || 'Daily WOD');
-  const date = result.date;
+  const date = result?.date || wod?.date;
 
   const showLeaderboard = !isCustomWorkout && wod && isRankable(wodType);
 
@@ -53,7 +53,7 @@ export default function PostWodSummary({
   const participationCount = totalParticipants;
 
   // Find user's rank (only within ranked results)
-  const userIdx = leaderboardResults.findIndex(r => r.athleteId === currentUser.id);
+  const userIdx = leaderboardResults.findIndex(r => r.athleteId === currentUser?.id);
   const userRank = userIdx >= 0 && userIdx < rankedCount ? userIdx + 1 : 0;
 
   return (
@@ -86,7 +86,7 @@ export default function PostWodSummary({
                 {isUpdate ? 'Workout Updated!' : 'Workout Logged!'}
               </h1>
               <p className="text-slate-400 text-sm">
-                {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+                {date && new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
                   weekday: 'long', month: 'long', day: 'numeric'
                 })}
               </p>
@@ -94,10 +94,10 @@ export default function PostWodSummary({
           ) : (
             <>
               <h1 className="text-2xl font-bold text-white mb-1">
-                {isCustomWorkout ? (result.customWodName ? `"${result.customWodName}"` : 'Custom Workout') : (wod?.name ? `"${wod.name}"` : 'Daily WOD')}
+                {isCustomWorkout ? (result?.customWodName ? `"${result.customWodName}"` : 'Custom Workout') : (wod?.name ? `"${wod.name}"` : 'Daily WOD')}
               </h1>
               <p className="text-slate-400 text-sm">
-                {new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
+                {date && new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
                   weekday: 'long', month: 'long', day: 'numeric'
                 })}
               </p>
@@ -118,7 +118,7 @@ export default function PostWodSummary({
                 Custom
               </span>
             )}
-            {result.rx !== undefined && (
+            {result?.rx !== undefined && (
               <span className={`text-xs px-2 py-1 rounded-lg font-semibold ${
                 result.rx !== false ? 'bg-green-600/20 text-green-400' : 'bg-amber-600/20 text-amber-400'
               }`}>
@@ -128,7 +128,8 @@ export default function PostWodSummary({
           </div>
         </div>
 
-        {/* Your Performance */}
+        {/* Your Performance (only when result exists) */}
+        {result && (
         <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 mb-4 border border-slate-700/50 animate-slide-up" style={{ animationDelay: '80ms' }}>
           <h3 className="text-sm font-semibold text-slate-400 tracking-wide mb-3">YOUR PERFORMANCE</h3>
 
@@ -176,6 +177,7 @@ export default function PostWodSummary({
             </div>
           )}
         </div>
+        )}
 
         {/* Participation (coach WODs only) */}
         {showLeaderboard && participationCount > 0 && (
@@ -234,9 +236,9 @@ export default function PostWodSummary({
                     rank={isRanked ? idx + 1 : null}
                     result={r}
                     wodType={wodType}
-                    isCurrentUser={r.athleteId === currentUser.id}
+                    isCurrentUser={r.athleteId === currentUser?.id}
                     reactions={reactions[r.id] || []}
-                    currentUserId={currentUser.id}
+                    currentUserId={currentUser?.id}
                     onToggleReaction={onToggleReaction}
                   />
                 );

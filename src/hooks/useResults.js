@@ -398,6 +398,16 @@ export function useResults(currentUser) {
     });
   };
 
+  const showWodReview = (wod) => {
+    setPostWodSummaryData({
+      result: null,
+      wod,
+      isCustomWorkout: false,
+      isUpdate: false,
+      mode: 'detail',
+    });
+  };
+
   return {
     workoutResults, setWorkoutResults,
     allAthleteResults, setAllAthleteResults,
@@ -429,5 +439,6 @@ export function useResults(currentUser) {
     handleCustomMovementInput,
     selectCustomMovement,
     showWorkoutSummary,
+    showWodReview,
   };
 }
