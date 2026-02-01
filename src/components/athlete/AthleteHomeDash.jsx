@@ -14,6 +14,7 @@ export default function AthleteHomeDash({
   todayWOD,
   missedWODs,
   workoutResults,
+  allAthleteResults = [],
   allWODs,
   myResult,
   startLogMissedWOD,
@@ -108,7 +109,14 @@ export default function AthleteHomeDash({
       {/* Quick Action - Today's WOD Status */}
       {todayWOD && myResult.isCustomResult ? (
         /* Custom Workout Completed - Show custom workout instead of daily WOD */
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 sm:p-6 mb-8 border border-violet-700/50 shadow-lg">
+        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl mb-8 border border-violet-700/50 shadow-lg overflow-hidden">
+          <div
+            className="p-5 sm:p-6 cursor-pointer active:bg-slate-700 transition-colors"
+            onClick={() => {
+              const todayResult = workoutResults.find(r => r.date === new Date().toISOString().split('T')[0]);
+              if (todayResult) showWorkoutSummary(todayResult);
+            }}
+          >
           <div className="flex items-center gap-2 mb-1">
             <span className="text-green-400">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -152,8 +160,9 @@ export default function AthleteHomeDash({
             </div>
           </div>
 
+          </div>
           {/* View Today's WOD link */}
-          <div className="border-t border-slate-700 pt-3">
+          <div className="border-t border-slate-700 px-5 sm:px-6 py-3">
             <div className="text-slate-400 text-xs mb-2">Today's coach WOD is also available:</div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -173,8 +182,18 @@ export default function AthleteHomeDash({
             </div>
           </div>
         </div>
-      ) : todayWOD ? (
-        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 sm:p-6 mb-8 border border-slate-700/50 shadow-lg">
+      ) : todayWOD ? (() => {
+        const completedThisWod = myResult.existingResultId && !myResult.existingResultForDifferentWod;
+        return (
+        <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl mb-8 border border-slate-700/50 shadow-lg overflow-hidden">
+          <div
+            className={`p-5 sm:p-6 ${completedThisWod ? 'cursor-pointer active:bg-slate-700 transition-colors' : ''}`}
+            onClick={() => {
+              if (!completedThisWod) return;
+              const todayResult = workoutResults.find(r => r.date === new Date().toISOString().split('T')[0]);
+              if (todayResult) showWorkoutSummary(todayResult);
+            }}
+          >
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-2 mb-3">
@@ -199,7 +218,7 @@ export default function AthleteHomeDash({
 
               {/* Status Badge */}
               <div className="flex items-center gap-2 mb-4">
-                {myResult.existingResultId ? (
+                {completedThisWod ? (
                   <div className="flex items-center gap-2">
                     <span className="text-green-400 text-sm flex items-center gap-1">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -249,12 +268,14 @@ export default function AthleteHomeDash({
             )}
           </div>
 
+          </div>
           {/* Action Button */}
+          <div className="px-5 sm:px-6 pb-5 sm:pb-6">
           <button
             onClick={() => navigate('workout')}
             className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 text-white px-5 py-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 text-base shadow-lg shadow-red-600/25 touch-target-lg"
           >
-            {myResult.existingResultId ? (
+            {completedThisWod ? (
               <>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -270,7 +291,7 @@ export default function AthleteHomeDash({
           </button>
 
           {/* Custom Workout Option */}
-          {!myResult.existingResultId && (
+          {!completedThisWod && (
             <button
               onClick={startCustomWorkout}
               className="w-full mt-3 text-slate-400 hover:text-white text-sm font-medium transition-colors"
@@ -278,8 +299,9 @@ export default function AthleteHomeDash({
               Did a different workout? Log custom WOD
             </button>
           )}
+          </div>
         </div>
-      ) : (
+      ); })() : (
         <div className="bg-slate-800 rounded-2xl p-6 sm:p-8 text-center border border-slate-700 mb-6">
           <Calendar className="w-16 h-16 text-slate-500 mx-auto mb-4" />
           <p className="text-white font-semibold text-lg mb-2">No WOD Posted Yet</p>
@@ -307,6 +329,25 @@ export default function AthleteHomeDash({
           loadReactionsForResults={loadReactionsForResults}
         />
       )}
+
+      {/* Activity Feed Link */}
+      <button
+        onClick={() => navigate('feed')}
+        className="w-full bg-slate-800/80 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-slate-700/50 text-left flex items-center justify-between hover:border-red-600/30 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="bg-red-600/20 p-2 rounded-lg">
+            <Dumbbell className="w-4 h-4 text-red-400" />
+          </div>
+          <div>
+            <div className="text-white font-semibold text-sm">Activity Feed</div>
+            <div className="text-slate-400 text-xs">See what everyone's been doing</div>
+          </div>
+        </div>
+        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
 
       {/* Missed WODs Section */}
       {missedWODs.length > 0 && (
@@ -366,25 +407,6 @@ export default function AthleteHomeDash({
         </div>
       )}
 
-      {/* Activity Feed Link */}
-      <button
-        onClick={() => navigate('feed')}
-        className="w-full bg-slate-800/80 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-slate-700/50 text-left flex items-center justify-between hover:border-red-600/30 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="bg-red-600/20 p-2 rounded-lg">
-            <Dumbbell className="w-4 h-4 text-red-400" />
-          </div>
-          <div>
-            <div className="text-white font-semibold text-sm">Activity Feed</div>
-            <div className="text-slate-400 text-xs">See what everyone's been doing</div>
-          </div>
-        </div>
-        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
-
       {/* Recent Workouts */}
       <div className="bg-slate-800 rounded-2xl p-5 sm:p-6 border border-slate-700">
         <div className="flex items-center justify-between mb-5">
@@ -409,8 +431,13 @@ export default function AthleteHomeDash({
         ) : (
           <div className="space-y-4">
             {workoutResults.slice(0, 5).map((result) => {
-              const wod = allWODs.find(w => w.date === result.date);
-              const completedCount = workoutResults.filter(r => r.date === result.date).length;
+              let wod = result.wodId ? allWODs.find(w => w.id === result.wodId) : null;
+              if (!wod || wod.date !== result.date) {
+                wod = allWODs.find(w => w.date === result.date) || wod;
+              }
+              const completedCount = result.wodId
+                ? allAthleteResults.filter(r => r.wodId === result.wodId).length
+                : 1;
 
               return (
                 <div

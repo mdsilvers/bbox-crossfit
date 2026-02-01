@@ -39,25 +39,24 @@ export default function LeaderboardRow({ rank, result, wodType, isCurrentUser, r
     setShowPicker(false);
   }, [onToggleReaction, result.id]);
 
-  // Long-press handlers for touch devices
-  const handlePointerDown = useCallback((e) => {
+  const canReact = !isCurrentUser && !!onToggleReaction;
+
+  // Long-press on the row to open reaction picker
+  const handlePointerDown = useCallback(() => {
+    if (!canReact) return;
     didLongPress.current = false;
     longPressTimer.current = setTimeout(() => {
       didLongPress.current = true;
       setShowPicker(true);
     }, 500);
-  }, []);
+  }, [canReact]);
 
   const handlePointerUp = useCallback(() => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
-    // If it was a short tap (not long-press), toggle fist bump
-    if (!didLongPress.current) {
-      handleToggle('fist_bump');
-    }
-  }, [handleToggle]);
+  }, []);
 
   const handlePointerLeave = useCallback(() => {
     if (longPressTimer.current) {
@@ -67,15 +66,20 @@ export default function LeaderboardRow({ rank, result, wodType, isCurrentUser, r
   }, []);
 
   const handleContextMenu = useCallback((e) => {
+    if (!canReact) return;
     e.preventDefault();
     setShowPicker(prev => !prev);
-  }, []);
+  }, [canReact]);
 
   return (
     <div
-      className={`flex items-center gap-3 py-2.5 px-3 rounded-lg ${
+      className={`flex items-center gap-3 py-2.5 px-3 rounded-lg relative select-none ${
         isCurrentUser ? 'bg-red-600/10 border border-red-600/30' : ''
       }`}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerLeave={handlePointerLeave}
+      onContextMenu={handleContextMenu}
     >
       {/* Rank */}
       <div className="flex-shrink-0 w-8">
@@ -102,72 +106,17 @@ export default function LeaderboardRow({ rank, result, wodType, isCurrentUser, r
         </span>
       </div>
 
-      {/* Reactions - only for other athletes */}
-      {!isCurrentUser && onToggleReaction && (
-        <div className="flex-shrink-0 flex items-center gap-0.5 relative">
-          {/* Show counts for active reaction types */}
-          {REACTION_TYPES.filter(rt => rt.key !== 'fist_bump' && reactionCounts[rt.key]).map(rt => (
-            <button
-              key={rt.key}
-              onClick={(e) => { e.stopPropagation(); handleToggle(rt.key); }}
-              className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-xs transition-colors ${
-                userReactions.has(rt.key)
-                  ? 'bg-red-600/20 border border-red-600/40 text-white'
-                  : 'bg-slate-700/50 border border-slate-600/30 text-slate-400 hover:text-white'
-              }`}
-            >
-              <span className="text-[10px]">{rt.emoji}</span>
-              <span className="font-medium text-[10px]">{reactionCounts[rt.key]}</span>
-            </button>
-          ))}
-
-          {/* Primary fist bump button with long-press */}
-          <button
-            onPointerDown={(e) => { e.stopPropagation(); handlePointerDown(e); }}
-            onPointerUp={(e) => { e.stopPropagation(); handlePointerUp(); }}
-            onPointerLeave={handlePointerLeave}
-            onContextMenu={(e) => { e.stopPropagation(); handleContextMenu(e); }}
-            className={`inline-flex items-center gap-0.5 px-1.5 py-1 rounded-full text-xs transition-colors select-none ${
-              userReactions.has('fist_bump')
-                ? 'bg-red-600/20 border border-red-600/40 text-white'
-                : 'bg-slate-700/50 border border-slate-600/30 text-slate-400 hover:text-white hover:border-slate-500'
-            }`}
-            title="Tap: Fist Bump · Hold: More reactions"
-          >
-            <span className="text-xs">{'\u{1F44A}'}</span>
-            {reactionCounts['fist_bump'] > 0 && <span className="font-medium">{reactionCounts['fist_bump']}</span>}
-          </button>
-
-          {/* Mini reaction picker (shown on long-press or context menu) */}
-          {showPicker && (
-            <>
-              <div className="fixed inset-0 z-40" onClick={() => setShowPicker(false)} />
-              <div className="absolute right-0 bottom-full mb-1 z-50 flex items-center gap-1 bg-slate-800 border border-slate-600 rounded-full px-2 py-1.5 shadow-xl">
-                {REACTION_TYPES.map(rt => (
-                  <button
-                    key={rt.key}
-                    onClick={(e) => { e.stopPropagation(); handleToggle(rt.key); }}
-                    className={`w-7 h-7 flex items-center justify-center rounded-full text-sm transition-transform hover:scale-125 ${
-                      userReactions.has(rt.key) ? 'bg-red-600/30' : 'hover:bg-slate-700'
-                    }`}
-                    title={rt.label}
-                  >
-                    {rt.emoji}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Show reaction counts for own result (read-only) */}
-      {isCurrentUser && hasAnyReactions && (
+      {/* Inline reaction counts (shown when reactions exist) */}
+      {hasAnyReactions && (
         <div className="flex-shrink-0 flex items-center gap-0.5">
           {REACTION_TYPES.filter(rt => reactionCounts[rt.key]).map(rt => (
             <span
               key={rt.key}
-              className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-xs bg-slate-700/50 border border-slate-600/30 text-slate-400"
+              className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded-full text-xs ${
+                !isCurrentUser && userReactions.has(rt.key)
+                  ? 'bg-red-600/20 border border-red-600/40 text-white'
+                  : 'bg-slate-700/50 border border-slate-600/30 text-slate-400'
+              }`}
             >
               <span className="text-[10px]">{rt.emoji}</span>
               <span className="font-medium text-[10px]">{reactionCounts[rt.key]}</span>
@@ -195,6 +144,27 @@ export default function LeaderboardRow({ rank, result, wodType, isCurrentUser, r
           </span>
         )}
       </div>
+
+      {/* Reaction picker (shown on long-press or context menu) */}
+      {showPicker && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setShowPicker(false)} />
+          <div className="absolute right-3 bottom-full mb-1 z-50 flex items-center gap-1 bg-slate-800 border border-slate-600 rounded-full px-2 py-1.5 shadow-xl">
+            {REACTION_TYPES.map(rt => (
+              <button
+                key={rt.key}
+                onClick={(e) => { e.stopPropagation(); handleToggle(rt.key); }}
+                className={`w-7 h-7 flex items-center justify-center rounded-full text-sm transition-transform hover:scale-125 ${
+                  userReactions.has(rt.key) ? 'bg-red-600/30' : 'hover:bg-slate-700'
+                }`}
+                title={rt.label}
+              >
+                {rt.emoji}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
