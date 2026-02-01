@@ -33,7 +33,7 @@ export default function AthleteDashboard() {
     workoutResults,
     allAthleteResults,
     myResult, setMyResult,
-    editingWorkout,
+    editingWorkout, setEditingWorkout,
     showDeleteConfirm, setShowDeleteConfirm,
     isCustomWorkout,
     customWod, setCustomWod,
@@ -44,6 +44,7 @@ export default function AthleteDashboard() {
     postWodSummaryData, setPostWodSummaryData,
     showWorkoutSummary,
     loadMyResults,
+    loadAllResults,
     logResult,
     logCustomWorkout,
     startLogMissedWOD,
@@ -68,7 +69,12 @@ export default function AthleteDashboard() {
 
   const [currentView, setCurrentView] = useState('dashboard');
 
-  const navigate = (view) => setCurrentView(view);
+  const navigate = (view) => {
+    if (view !== 'workout') {
+      setEditingWorkout(null);
+    }
+    setCurrentView(view);
+  };
 
   // Data loading
   useEffect(() => {
@@ -78,6 +84,7 @@ export default function AthleteDashboard() {
       const wod = await loadTodayWOD();
       const results = await loadMyResults(wod, null);
       await loadMissedWODs(results, workoutResults);
+      await loadAllResults();
       const wods = await loadAllWODs();
       const prs = calculateBenchmarkPRs(results, wods);
       setBenchmarkPRs(prs);
@@ -133,6 +140,7 @@ export default function AthleteDashboard() {
               todayWOD={todayWOD}
               missedWODs={missedWODs}
               workoutResults={workoutResults}
+              allAthleteResults={allAthleteResults}
               allWODs={allWODs}
               myResult={myResult}
               startLogMissedWOD={(wod) => startLogMissedWOD(wod, navigate)}
@@ -160,6 +168,7 @@ export default function AthleteDashboard() {
           {currentView === 'history' && (
             <AthleteHistoryView
               workoutResults={workoutResults}
+              allAthleteResults={allAthleteResults}
               allWODs={allWODs}
               currentUser={currentUser}
               todayWOD={todayWOD}

@@ -20,6 +20,7 @@ export default function CoachAthleteList({
   onDeleteComment,
   loadReactionsForResults,
   loadCommentsForResults,
+  showWorkoutSummary,
 }) {
   const [expandedAthlete, setExpandedAthlete] = useState(null);
 
@@ -165,7 +166,8 @@ export default function CoachAthleteList({
                         return (
                           <div
                             key={workout.id}
-                            className="bg-slate-800 rounded-lg p-3 border border-slate-700"
+                            className={`bg-slate-800 rounded-lg p-3 border border-slate-700${showWorkoutSummary ? ' cursor-pointer active:bg-slate-700 transition-colors' : ''}`}
+                            onClick={showWorkoutSummary ? () => showWorkoutSummary(workout) : undefined}
                           >
                             {/* WOD Name + Type + Time Header */}
                             <div className="flex items-start justify-between mb-2">
@@ -234,7 +236,7 @@ export default function CoachAthleteList({
                                 src={workout.photoData}
                                 alt="Workout"
                                 className="w-full rounded h-32 object-cover mb-2 cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => setPhotoModalUrl(workout.photoData)}
+                                onClick={(e) => { e.stopPropagation(); setPhotoModalUrl(workout.photoData); }}
                               />
                             )}
 
@@ -246,20 +248,22 @@ export default function CoachAthleteList({
                             )}
 
                             {/* Social: Reactions & Comments */}
-                            <ReactionBar
-                              resultId={workout.id}
-                              reactions={reactions[workout.id] || []}
-                              currentUserId={currentUser.id}
-                              onToggleReaction={onToggleReaction}
-                              isOwnResult={false}
-                            />
-                            <CommentThread
-                              resultId={workout.id}
-                              comments={comments[workout.id] || []}
-                              currentUser={currentUser}
-                              onPost={onPostComment}
-                              onDelete={onDeleteComment}
-                            />
+                            <div onClick={(e) => e.stopPropagation()}>
+                              <ReactionBar
+                                resultId={workout.id}
+                                reactions={reactions[workout.id] || []}
+                                currentUserId={currentUser.id}
+                                onToggleReaction={onToggleReaction}
+                                isOwnResult={false}
+                              />
+                              <CommentThread
+                                resultId={workout.id}
+                                comments={comments[workout.id] || []}
+                                currentUser={currentUser}
+                                onPost={onPostComment}
+                                onDelete={onDeleteComment}
+                              />
+                            </div>
                           </div>
                         );
                       })}

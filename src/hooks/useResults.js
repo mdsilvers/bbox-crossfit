@@ -53,17 +53,34 @@ export function useResults(currentUser) {
 
       if (todayResult) {
         const isCustom = !!(todayResult.customWodName || todayResult.customWodType);
-        setMyResult({
-          time: todayResult.time,
-          movements: todayResult.movements,
-          notes: todayResult.notes,
-          photoData: todayResult.photoData,
-          rx: todayResult.rx !== undefined ? todayResult.rx : true,
-          existingResultId: todayResult.id,
-          isCustomResult: isCustom,
-          customWodName: todayResult.customWodName,
-          customWodType: todayResult.customWodType,
-        });
+        const matchesCurrentWod = isCustom || !currentWOD || todayResult.wodId === currentWOD.id;
+
+        if (matchesCurrentWod) {
+          setMyResult({
+            time: todayResult.time,
+            movements: todayResult.movements,
+            notes: todayResult.notes,
+            photoData: todayResult.photoData,
+            rx: todayResult.rx !== undefined ? todayResult.rx : true,
+            existingResultId: todayResult.id,
+            isCustomResult: isCustom,
+            customWodName: todayResult.customWodName,
+            customWodType: todayResult.customWodType,
+          });
+        } else if (currentWOD) {
+          // Result exists for today but for a different WOD — show current WOD
+          // as not completed. Keep existingResultId so logging updates rather
+          // than inserts (unique constraint on athlete_id + date).
+          setMyResult({
+            time: '',
+            movements: currentWOD.movements.map(m => ({ ...m, weight: '' })),
+            notes: '',
+            photoData: null,
+            rx: true,
+            existingResultId: todayResult.id,
+            existingResultForDifferentWod: true,
+          });
+        }
       } else if (currentWOD) {
         setMyResult({
           time: '',
@@ -82,8 +99,6 @@ export function useResults(currentUser) {
   };
 
   const loadAllResults = async () => {
-    if (currentUser?.role !== 'coach') return;
-
     try {
       const resultsData = await db.getAllResults();
       const allResults = resultsData.map(r => db.resultToAppFormat(r));
@@ -131,10 +146,7 @@ export function useResults(currentUser) {
       });
 
       const results = await loadMyResults();
-
-      if (currentUser.role === 'coach') {
-        await loadAllResults();
-      }
+      await loadAllResults();
 
       if (onSuccess) await onSuccess(results);
 
@@ -193,10 +205,7 @@ export function useResults(currentUser) {
       });
 
       const results = await loadMyResults();
-
-      if (currentUser.role === 'coach') {
-        await loadAllResults();
-      }
+      await loadAllResults();
 
       if (onSuccess) await onSuccess(results);
 
@@ -279,9 +288,7 @@ export function useResults(currentUser) {
     try {
       await db.deleteResult(workoutId);
       await loadMyResults();
-      if (currentUser.role === 'coach') {
-        await loadAllResults();
-      }
+      await loadAllResults();
       setShowDeleteConfirm(null);
     } catch (error) {
       alert('Error deleting workout: ' + error.message);
@@ -375,11 +382,27 @@ export function useResults(currentUser) {
 
   const showWorkoutSummary = (result, allWODs = []) => {
     const isCustom = !!(result.customWodName || result.customWodType);
-    const wod = isCustom ? null : allWODs.find(w => w.date === result.date) || null;
+    let wod = null;
+    if (!isCustom) {
+      wod = result.wodId ? allWODs.find(w => w.id === result.wodId) : null;
+      if (!wod || wod.date !== result.date) {
+        wod = allWODs.find(w => w.date === result.date) || wod;
+      }
+    }
     setPostWodSummaryData({
       result,
       wod,
       isCustomWorkout: isCustom,
+      isUpdate: false,
+      mode: 'detail',
+    });
+  };
+
+  const showWodReview = (wod) => {
+    setPostWodSummaryData({
+      result: null,
+      wod,
+      isCustomWorkout: false,
       isUpdate: false,
       mode: 'detail',
     });
@@ -416,5 +439,6 @@ export function useResults(currentUser) {
     handleCustomMovementInput,
     selectCustomMovement,
     showWorkoutSummary,
+    showWodReview,
   };
 }

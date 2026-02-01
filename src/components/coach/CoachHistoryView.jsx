@@ -42,7 +42,10 @@ export default function CoachHistoryView({
     .filter(result => {
       if (!coachHistorySearch) return true;
       const searchLower = coachHistorySearch.toLowerCase();
-      const wod = allWODs.find(w => w.date === result.date);
+      let wod = result.wodId ? allWODs.find(w => w.id === result.wodId) : null;
+      if (!wod || wod.date !== result.date) {
+        wod = allWODs.find(w => w.date === result.date) || wod;
+      }
       const dateStr = new Date(result.date).toLocaleDateString('en-US', {
         weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
       }).toLowerCase();
@@ -97,7 +100,10 @@ export default function CoachHistoryView({
         <div className="space-y-3">
           <p className="text-slate-400 text-sm">{filteredWorkouts.length} workout{filteredWorkouts.length !== 1 ? 's' : ''} found</p>
           {filteredWorkouts.map((result) => {
-            const wod = allWODs.find(w => w.date === result.date);
+            let wod = result.wodId ? allWODs.find(w => w.id === result.wodId) : null;
+            if (!wod || wod.date !== result.date) {
+              wod = allWODs.find(w => w.date === result.date) || wod;
+            }
             const completedCount = result.wodId
               ? allAthleteResults.filter(r => r.wodId === result.wodId).length
               : 1;

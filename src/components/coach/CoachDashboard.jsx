@@ -70,6 +70,7 @@ export default function CoachDashboard() {
     photoModalUrl, setPhotoModalUrl,
     postWodSummaryData, setPostWodSummaryData,
     showWorkoutSummary,
+    showWodReview,
     loadMyResults,
     loadAllResults,
     logResult,
@@ -90,7 +91,15 @@ export default function CoachDashboard() {
   } = results;
 
   // Navigation function passed to children and hook callbacks
-  const navigate = (view) => setCoachView(view);
+  const navigate = (view) => {
+    // Clear stale editing state when leaving the workout form
+    if (view !== 'workout') {
+      setEditingWorkout(null);
+    }
+    setCoachView(view);
+  };
+
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   // Load data on mount
   useEffect(() => {
@@ -99,11 +108,12 @@ export default function CoachDashboard() {
 
       const wod = await loadTodayWOD();
       const myResults = await loadMyResults(wod, null);
-      await loadMissedWODs(myResults, workoutResults);
       const wods = await loadAllWODs();
+      await loadAllResults();
+      await loadMissedWODs(myResults, workoutResults);
       const prs = calculateBenchmarkPRs(myResults, wods);
       setBenchmarkPRs(prs);
-      loadAllResults();
+      setDataLoaded(true);
       await badgesHook.loadMyBadges();
       await badgesHook.loadAllUserBadges();
       await badgesHook.checkAndAwardBadges(myResults, wods, prs);
@@ -164,7 +174,7 @@ export default function CoachDashboard() {
         {/* Content Area */}
         <div className="px-4 py-4">
           {/* Dashboard View */}
-          {coachView === 'dashboard' && (
+          {coachView === 'dashboard' && dataLoaded && (
             <CoachHomeDash
               currentUser={currentUser}
               stats={stats}
@@ -268,6 +278,7 @@ export default function CoachDashboard() {
               allWODs={allWODs}
               workoutResults={workoutResults}
               allAthleteResults={allAthleteResults}
+              showWodReview={showWodReview}
               showWODForm={showWODForm}
               setShowWODForm={setShowWODForm}
               newWOD={newWOD}
@@ -312,6 +323,7 @@ export default function CoachDashboard() {
               allAthleteResults={allAthleteResults}
               allWODs={allWODs}
               currentUser={currentUser}
+              showWorkoutSummary={(result) => showWorkoutSummary(result, allWODs)}
               allUserBadges={badgesHook.allUserBadges}
               photoModalUrl={photoModalUrl}
               setPhotoModalUrl={setPhotoModalUrl}
