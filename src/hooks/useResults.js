@@ -10,7 +10,8 @@ export function useResults(currentUser) {
     time: '',
     movements: [],
     notes: '',
-    photoData: null
+    photoData: null,
+    rx: true,
   });
   const [editingWorkout, setEditingWorkout] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
@@ -56,6 +57,7 @@ export function useResults(currentUser) {
           movements: todayResult.movements,
           notes: todayResult.notes,
           photoData: todayResult.photoData,
+          rx: todayResult.rx !== undefined ? todayResult.rx : true,
           existingResultId: todayResult.id,
           isCustomResult: isCustom,
           customWodName: todayResult.customWodName,
@@ -66,7 +68,8 @@ export function useResults(currentUser) {
           time: '',
           movements: currentWOD.movements.map(m => ({ ...m, weight: '' })),
           notes: '',
-          photoData: null
+          photoData: null,
+          rx: true,
         });
       }
 
@@ -102,6 +105,7 @@ export function useResults(currentUser) {
       movements: myResult.movements,
       notes: myResult.notes,
       photoData: myResult.photoData,
+      rx: myResult.rx !== undefined ? myResult.rx : true,
     };
 
     try {
@@ -151,6 +155,7 @@ export function useResults(currentUser) {
       movements: validMovements.map(m => ({ ...m, weight: '' })),
       notes: myResult.notes,
       photoData: myResult.photoData,
+      rx: myResult.rx !== undefined ? myResult.rx : true,
       customWodName: customWod.name || null,
       customWodType: customWod.type,
     };
@@ -194,7 +199,8 @@ export function useResults(currentUser) {
       time: '',
       movements: wod.movements.map(m => ({ ...m, weight: '' })),
       notes: '',
-      photoData: null
+      photoData: null,
+      rx: true,
     });
     setIsCustomWorkout(false);
     if (navigate) navigate('workout');
@@ -214,7 +220,8 @@ export function useResults(currentUser) {
       time: '',
       movements: [],
       notes: '',
-      photoData: null
+      photoData: null,
+      rx: true,
     });
     if (navigate) navigate('workout');
   };
@@ -239,6 +246,7 @@ export function useResults(currentUser) {
       movements: result.movements,
       notes: result.notes,
       photoData: result.photoData,
+      rx: result.rx !== undefined ? result.rx : true,
       existingResultId: result.id
     });
     if (navigate) navigate('workout');
@@ -269,6 +277,7 @@ export function useResults(currentUser) {
           movements: todayResult.movements,
           notes: todayResult.notes,
           photoData: todayResult.photoData,
+          rx: todayResult.rx !== undefined ? todayResult.rx : true,
           existingResultId: todayResult.id,
           isCustomResult: isCustom,
           customWodName: todayResult.customWodName,
@@ -279,7 +288,8 @@ export function useResults(currentUser) {
           time: '',
           movements: todayWOD.movements.map(m => ({ ...m, weight: '' })),
           notes: '',
-          photoData: null
+          photoData: null,
+          rx: true,
         });
       }
     }

@@ -197,8 +197,10 @@
 .p-2 { padding: 0.5rem; }
 
 /* Additional margin utilities */
+.mt-0\.5 { margin-top: 0.125rem; }
 .mt-1 { margin-top: 0.25rem; }
 .ml-1 { margin-left: 0.25rem; }
+.ml-2 { margin-left: 0.5rem; }
 
 /* Text utilities */
 .text-center { text-align: center; }
@@ -220,8 +222,19 @@
 .sticky { position: sticky; }
 .top-0 { top: 0; }
 .z-10 { z-index: 10; }
+.z-50 { z-index: 50; }
+.fixed { position: fixed; }
 .overflow-hidden { overflow: hidden; }
 .overflow-y-auto { overflow-y: auto; }
+.min-w-0 { min-width: 0; }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leading-tight { line-height: 1.25; }
+.inline-block { display: inline-block; }
+.left-1\/2 { left: 50%; }
+.-translate-x-1\/2 { transform: translateX(-50%); }
+.opacity-40 { opacity: 0.4; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
 
 /* Border utilities */
 .border { border-width: 1px; }
@@ -317,4 +330,20 @@ button, a {
 
 .card-hover {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Badge toast slide-in animation */
+@keyframes slide-in-top {
+  from {
+    transform: translate(-50%, -100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-top {
+  animation: slide-in-top 0.3s ease-out;
 }

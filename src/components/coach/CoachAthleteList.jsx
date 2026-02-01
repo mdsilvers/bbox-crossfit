@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Calendar } from 'lucide-react';
 import { formatScore } from '../../lib/score-utils';
 import { isBenchmarkWod } from '../../lib/benchmarks';
+import ReactionBar from '../social/ReactionBar';
+import CommentThread from '../social/CommentThread';
 
 export default function CoachAthleteList({
   allAthleteResults,
@@ -9,8 +11,27 @@ export default function CoachAthleteList({
   currentUser,
   photoModalUrl,
   setPhotoModalUrl,
+  reactions = {},
+  comments = {},
+  onToggleReaction,
+  onPostComment,
+  onDeleteComment,
+  loadReactionsForResults,
+  loadCommentsForResults,
 }) {
   const [expandedAthlete, setExpandedAthlete] = useState(null);
+
+  // Load social data when athlete is expanded
+  useEffect(() => {
+    if (expandedAthlete && loadReactionsForResults) {
+      const athleteWorkouts = allAthleteResults.filter(r => r.athleteEmail === expandedAthlete);
+      const ids = athleteWorkouts.map(r => r.id);
+      if (ids.length > 0) {
+        loadReactionsForResults(ids);
+        loadCommentsForResults(ids);
+      }
+    }
+  }, [expandedAthlete]);
 
   // Group results by athlete - use allAthleteResults for coaches
   const athleteData = {};
@@ -215,10 +236,25 @@ export default function CoachAthleteList({
 
                             {/* Notes */}
                             {workout.notes && (
-                              <div className="text-slate-400 text-xs italic">
+                              <div className="text-slate-400 text-xs italic mb-2">
                                 "{workout.notes}"
                               </div>
                             )}
+
+                            {/* Social: Reactions & Comments */}
+                            <ReactionBar
+                              resultId={workout.id}
+                              reactions={reactions[workout.id] || []}
+                              currentUserId={currentUser.id}
+                              onToggleReaction={onToggleReaction}
+                            />
+                            <CommentThread
+                              resultId={workout.id}
+                              comments={comments[workout.id] || []}
+                              currentUser={currentUser}
+                              onPost={onPostComment}
+                              onDelete={onDeleteComment}
+                            />
                           </div>
                         );
                       })}

@@ -4,10 +4,14 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useResults } from '../../hooks/useResults';
 import { useBenchmarkPRs } from '../../hooks/useBenchmarkPRs';
+import { useSocial } from '../../hooks/useSocial';
+import { useBadges } from '../../hooks/useBadges';
 import { calculateStats } from '../../lib/stats';
 import BBoxLogo from '../shared/BBoxLogo';
 import PhotoModal from '../shared/PhotoModal';
+import BadgeToast from '../social/BadgeToast';
 import ProgressDashboard from '../ProgressDashboard';
+import ActivityFeed from '../social/ActivityFeed';
 import AthleteHomeDash from './AthleteHomeDash';
 import AthleteHistoryView from './AthleteHistoryView';
 import AthleteWorkoutView from './AthleteWorkoutView';
@@ -55,6 +59,9 @@ export default function AthleteDashboard() {
 
   const { benchmarkPRs, setBenchmarkPRs, calculateBenchmarkPRs } = useBenchmarkPRs();
 
+  const social = useSocial(currentUser);
+  const badges = useBadges(currentUser);
+
   const [currentView, setCurrentView] = useState('dashboard');
 
   const navigate = (view) => setCurrentView(view);
@@ -70,6 +77,14 @@ export default function AthleteDashboard() {
       const wods = await loadAllWODs();
       const prs = calculateBenchmarkPRs(results, wods);
       setBenchmarkPRs(prs);
+      await badges.loadMyBadges();
+      await badges.checkAndAwardBadges(results, wods, prs);
+      // Load social data for recent results
+      const resultIds = results.slice(0, 10).map(r => r.id);
+      if (resultIds.length > 0) {
+        await social.loadReactionsForResults(resultIds);
+        await social.loadCommentsForResults(resultIds);
+      }
     };
     loadData();
   }, [currentUser]);
@@ -122,6 +137,13 @@ export default function AthleteDashboard() {
               photoModalUrl={photoModalUrl}
               setPhotoModalUrl={setPhotoModalUrl}
               navigate={navigate}
+              reactions={social.reactions}
+              comments={social.comments}
+              onToggleReaction={social.toggleReaction}
+              onPostComment={social.postComment}
+              onDeleteComment={social.removeComment}
+              myBadges={badges.myBadges}
+              streakWeeks={badges.streakWeeks}
             />
           )}
 
@@ -139,6 +161,13 @@ export default function AthleteDashboard() {
               photoModalUrl={photoModalUrl}
               setPhotoModalUrl={setPhotoModalUrl}
               navigate={navigate}
+              reactions={social.reactions}
+              comments={social.comments}
+              onToggleReaction={social.toggleReaction}
+              onPostComment={social.postComment}
+              onDeleteComment={social.removeComment}
+              loadReactionsForResults={social.loadReactionsForResults}
+              loadCommentsForResults={social.loadCommentsForResults}
             />
           )}
 
@@ -150,6 +179,11 @@ export default function AthleteDashboard() {
               allAthleteResults={allAthleteResults}
               allWODs={allWODs}
             />
+          )}
+
+          {/* Activity Feed View */}
+          {currentView === 'feed' && (
+            <ActivityFeed currentUser={currentUser} allWODs={allWODs} />
           )}
 
           {/* Workout View */}
@@ -173,11 +207,13 @@ export default function AthleteDashboard() {
                 await loadMissedWODs(results, workoutResults);
                 const prs = calculateBenchmarkPRs(results, allWODs);
                 setBenchmarkPRs(prs);
+                await badges.checkAndAwardBadges(results, allWODs, prs);
               })}
               logCustomWorkout={() => logCustomWorkout(allWODs, async (results) => {
                 await loadMissedWODs(results, workoutResults);
                 const prs = calculateBenchmarkPRs(results, allWODs);
                 setBenchmarkPRs(prs);
+                await badges.checkAndAwardBadges(results, allWODs, prs);
                 navigate('dashboard');
               })}
               startCustomWorkout={() => startCustomWorkout(navigate)}
@@ -235,6 +271,9 @@ export default function AthleteDashboard() {
 
       {/* Photo Modal */}
       <PhotoModal url={photoModalUrl} onClose={() => setPhotoModalUrl(null)} />
+
+      {/* Badge Toast */}
+      <BadgeToast badge={badges.newBadgeToast} onDismiss={badges.dismissToast} />
     </div>
   );
 }

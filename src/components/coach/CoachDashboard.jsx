@@ -4,9 +4,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useResults } from '../../hooks/useResults';
 import { useBenchmarkPRs } from '../../hooks/useBenchmarkPRs';
+import { useSocial } from '../../hooks/useSocial';
+import { useBadges } from '../../hooks/useBadges';
 import { calculateStats } from '../../lib/stats';
 import BBoxLogo from '../shared/BBoxLogo';
 import PhotoModal from '../shared/PhotoModal';
+import BadgeToast from '../social/BadgeToast';
+import ActivityFeed from '../social/ActivityFeed';
 import CoachHomeDash from './CoachHomeDash';
 import CoachHistoryView from './CoachHistoryView';
 import CoachWorkoutView from './CoachWorkoutView';
@@ -21,6 +25,9 @@ export default function CoachDashboard() {
   const workouts = useWorkouts(currentUser);
   const results = useResults(currentUser);
   const { benchmarkPRs, setBenchmarkPRs, calculateBenchmarkPRs } = useBenchmarkPRs();
+
+  const social = useSocial(currentUser);
+  const badgesHook = useBadges(currentUser);
 
   const {
     allWODs,
@@ -93,6 +100,13 @@ export default function CoachDashboard() {
       const prs = calculateBenchmarkPRs(myResults, wods);
       setBenchmarkPRs(prs);
       loadAllResults();
+      await badgesHook.loadMyBadges();
+      await badgesHook.checkAndAwardBadges(myResults, wods, prs);
+      const resultIds = myResults.slice(0, 10).map(r => r.id);
+      if (resultIds.length > 0) {
+        await social.loadReactionsForResults(resultIds);
+        await social.loadCommentsForResults(resultIds);
+      }
     };
     loadData();
   }, [currentUser]);
@@ -109,6 +123,7 @@ export default function CoachDashboard() {
     await loadMissedWODs(freshResults, workoutResults);
     const prs = calculateBenchmarkPRs(freshResults, allWODs);
     setBenchmarkPRs(prs);
+    await badgesHook.checkAndAwardBadges(freshResults, allWODs, prs);
     navigate('dashboard');
   };
 
@@ -117,6 +132,7 @@ export default function CoachDashboard() {
     await loadMissedWODs(freshResults, workoutResults);
     const prs = calculateBenchmarkPRs(freshResults, allWODs);
     setBenchmarkPRs(prs);
+    await badgesHook.checkAndAwardBadges(freshResults, allWODs, prs);
     navigate('dashboard');
   };
 
@@ -166,6 +182,13 @@ export default function CoachDashboard() {
               setPhotoModalUrl={setPhotoModalUrl}
               navigate={navigate}
               editWOD={(wod) => editWOD(wod, navigate)}
+              reactions={social.reactions}
+              comments={social.comments}
+              onToggleReaction={social.toggleReaction}
+              onPostComment={social.postComment}
+              onDeleteComment={social.removeComment}
+              myBadges={badgesHook.myBadges}
+              streakWeeks={badgesHook.streakWeeks}
             />
           )}
 
@@ -186,6 +209,13 @@ export default function CoachDashboard() {
               photoModalUrl={photoModalUrl}
               setPhotoModalUrl={setPhotoModalUrl}
               navigate={navigate}
+              reactions={social.reactions}
+              comments={social.comments}
+              onToggleReaction={social.toggleReaction}
+              onPostComment={social.postComment}
+              onDeleteComment={social.removeComment}
+              loadReactionsForResults={social.loadReactionsForResults}
+              loadCommentsForResults={social.loadCommentsForResults}
             />
           )}
 
@@ -275,7 +305,19 @@ export default function CoachDashboard() {
               currentUser={currentUser}
               photoModalUrl={photoModalUrl}
               setPhotoModalUrl={setPhotoModalUrl}
+              reactions={social.reactions}
+              comments={social.comments}
+              onToggleReaction={social.toggleReaction}
+              onPostComment={social.postComment}
+              onDeleteComment={social.removeComment}
+              loadReactionsForResults={social.loadReactionsForResults}
+              loadCommentsForResults={social.loadCommentsForResults}
             />
+          )}
+
+          {/* Activity Feed View */}
+          {coachView === 'feed' && (
+            <ActivityFeed currentUser={currentUser} allWODs={allWODs} />
           )}
         </div>
 
@@ -335,6 +377,9 @@ export default function CoachDashboard() {
 
       {/* Photo Modal */}
       <PhotoModal url={photoModalUrl} onClose={() => setPhotoModalUrl(null)} />
+
+      {/* Badge Toast */}
+      <BadgeToast badge={badgesHook.newBadgeToast} onDismiss={badgesHook.dismissToast} />
     </div>
   );
 }

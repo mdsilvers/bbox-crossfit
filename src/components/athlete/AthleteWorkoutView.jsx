@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, Trash2, Calendar, Image } from 'lucide-react';
 import ScoreInput from '../ScoreInput';
+import RxToggle from '../shared/RxToggle';
 import { STANDARD_MOVEMENTS } from '../../lib/constants';
 import { isBenchmarkWod, getBenchmarkByName } from '../../lib/benchmarks';
 
@@ -139,6 +140,11 @@ export default function AthleteWorkoutView({
               <strong>Coach Notes:</strong> {todayWOD.notes}
             </div>
           )}
+
+          <RxToggle
+            value={myResult.rx !== undefined ? myResult.rx : true}
+            onChange={(val) => setMyResult({ ...myResult, rx: val })}
+          />
 
           <div className="mb-4">
             <ScoreInput
@@ -350,6 +356,12 @@ export default function AthleteWorkoutView({
               <Plus className="w-4 h-4" /> Add Movement
             </button>
           </div>
+
+          {/* RX/Scaled Toggle */}
+          <RxToggle
+            value={myResult.rx !== undefined ? myResult.rx : true}
+            onChange={(val) => setMyResult({ ...myResult, rx: val })}
+          />
 
           {/* Time Result */}
           <div className="mb-4">

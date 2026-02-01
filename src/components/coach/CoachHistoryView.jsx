@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dumbbell, Calendar } from 'lucide-react';
 import { formatScore } from '../../lib/score-utils';
 import { isBenchmarkWod } from '../../lib/benchmarks';
+import ReactionBar from '../social/ReactionBar';
+import CommentThread from '../social/CommentThread';
 
 export default function CoachHistoryView({
   workoutResults,
@@ -15,10 +17,26 @@ export default function CoachHistoryView({
   photoModalUrl,
   setPhotoModalUrl,
   navigate,
+  reactions = {},
+  comments = {},
+  onToggleReaction,
+  onPostComment,
+  onDeleteComment,
+  loadReactionsForResults,
+  loadCommentsForResults,
 }) {
   const [coachHistorySearch, setCoachHistorySearch] = useState('');
 
+  // Load social data for displayed results
   const myWorkouts = workoutResults.filter(r => r.athleteEmail === currentUser.email);
+
+  useEffect(() => {
+    const ids = myWorkouts.map(r => r.id);
+    if (ids.length > 0 && loadReactionsForResults) {
+      loadReactionsForResults(ids);
+      loadCommentsForResults(ids);
+    }
+  }, [myWorkouts.length]);
   const filteredWorkouts = myWorkouts
     .filter(result => {
       if (!coachHistorySearch) return true;
@@ -183,6 +201,21 @@ export default function CoachHistoryView({
                           </div>
                         )}
                       </div>
+
+                      {/* Social: Reactions & Comments */}
+                      <ReactionBar
+                        resultId={result.id}
+                        reactions={reactions[result.id] || []}
+                        currentUserId={currentUser.id}
+                        onToggleReaction={onToggleReaction}
+                      />
+                      <CommentThread
+                        resultId={result.id}
+                        comments={comments[result.id] || []}
+                        currentUser={currentUser}
+                        onPost={onPostComment}
+                        onDelete={onDeleteComment}
+                      />
 
                       {result.photoData && (
                         <div

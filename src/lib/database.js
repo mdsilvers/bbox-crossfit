@@ -288,6 +288,7 @@ export async function createResult(result, userId, userName, userEmail) {
       photo_url: result.photoData || null,
       custom_wod_name: result.customWodName || null,
       custom_wod_type: result.customWodType || null,
+      rx: result.rx !== undefined ? result.rx : true,
     })
     .select()
     .single();
@@ -306,6 +307,7 @@ export async function updateResult(id, result) {
       photo_url: result.photoData || null,
       custom_wod_name: result.customWodName || null,
       custom_wod_type: result.customWodType || null,
+      rx: result.rx !== undefined ? result.rx : true,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -421,6 +423,152 @@ export async function deleteBodyMeasurement(id) {
   if (error) throw error;
 }
 
+// ==================== LEADERBOARD FUNCTIONS ====================
+
+export async function getLeaderboardForDate(date) {
+  const { data, error } = await supabase
+    .from('results')
+    .select('*, profiles!athlete_id(group_type)')
+    .eq('date', date);
+
+  if (error) throw error;
+  return (data || []).map(r => ({
+    ...resultToAppFormat(r),
+    groupType: r.profiles?.group_type,
+  }));
+}
+
+// ==================== REACTION FUNCTIONS ====================
+
+export async function getReactionsForResults(resultIds) {
+  if (!resultIds || resultIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('result_reactions')
+    .select('*')
+    .in('result_id', resultIds);
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addReaction(resultId, userId, reactionType) {
+  const { data, error } = await supabase
+    .from('result_reactions')
+    .insert({
+      result_id: resultId,
+      user_id: userId,
+      reaction_type: reactionType,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function removeReaction(resultId, userId, reactionType) {
+  const { error } = await supabase
+    .from('result_reactions')
+    .delete()
+    .eq('result_id', resultId)
+    .eq('user_id', userId)
+    .eq('reaction_type', reactionType);
+
+  if (error) throw error;
+}
+
+// ==================== COMMENT FUNCTIONS ====================
+
+export async function getCommentsForResults(resultIds) {
+  if (!resultIds || resultIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('result_comments')
+    .select('*')
+    .in('result_id', resultIds)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function addComment(resultId, userId, userName, userRole, body) {
+  const { data, error } = await supabase
+    .from('result_comments')
+    .insert({
+      result_id: resultId,
+      author_id: userId,
+      author_name: userName,
+      author_role: userRole,
+      body,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteComment(commentId) {
+  const { error } = await supabase
+    .from('result_comments')
+    .delete()
+    .eq('id', commentId);
+
+  if (error) throw error;
+}
+
+// ==================== BADGE FUNCTIONS ====================
+
+export async function getUserBadges(userId) {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .select('*')
+    .eq('user_id', userId)
+    .order('earned_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function awardBadge(userId, badgeKey) {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .upsert(
+      { user_id: userId, badge_key: badgeKey },
+      { onConflict: 'user_id,badge_key' }
+    )
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getAllRecentBadges(limit = 20) {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .select('*, profiles!user_id(name)')
+    .order('earned_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function updateProfileStreak(userId, streakWeeks, bestStreak) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      streak_weeks: streakWeeks,
+      best_streak_weeks: bestStreak,
+    })
+    .eq('id', userId);
+
+  if (error) throw error;
+}
+
 // ==================== HELPER FUNCTIONS ====================
 
 // Transform Supabase profile to app user format
@@ -468,6 +616,7 @@ export function resultToAppFormat(result) {
     photoData: result.photo_url,
     customWodName: result.custom_wod_name,
     customWodType: result.custom_wod_type,
+    rx: result.rx !== undefined ? result.rx : true,
     loggedAt: result.created_at,
   };
 }

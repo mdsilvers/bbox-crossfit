@@ -2,6 +2,11 @@ import React from 'react';
 import { Plus, Dumbbell, Clock, Calendar, Trophy } from 'lucide-react';
 import { formatScore, getScoreLabel } from '../../lib/score-utils';
 import { isBenchmarkWod } from '../../lib/benchmarks';
+import Leaderboard from '../social/Leaderboard';
+import ReactionBar from '../social/ReactionBar';
+import CommentThread from '../social/CommentThread';
+import BadgeDisplay from '../social/BadgeDisplay';
+import StreakBadge from '../social/StreakBadge';
 
 export default function AthleteHomeDash({
   currentUser,
@@ -21,6 +26,13 @@ export default function AthleteHomeDash({
   photoModalUrl,
   setPhotoModalUrl,
   navigate,
+  reactions = {},
+  comments = {},
+  onToggleReaction,
+  onPostComment,
+  onDeleteComment,
+  myBadges = [],
+  streakWeeks = 0,
 }) {
   return (
     <>
@@ -37,7 +49,7 @@ export default function AthleteHomeDash({
             {stats.currentStreak}/7
           </div>
           <div className="text-orange-200 text-sm">
-            {stats.currentStreak >= 3 ? 'Strong!' : 'WODs'}
+            {streakWeeks > 0 ? <StreakBadge weeks={streakWeeks} /> : (stats.currentStreak >= 3 ? 'Strong!' : 'WODs')}
           </div>
         </div>
         <div className="bg-blue-600 rounded-2xl p-5">
@@ -91,6 +103,9 @@ export default function AthleteHomeDash({
           )}
         </div>
       )}
+
+      {/* Badges */}
+      <BadgeDisplay earnedBadgeKeys={myBadges} />
 
       {/* Quick Action - Today's WOD Status */}
       {todayWOD && myResult.isCustomResult ? (
@@ -281,6 +296,16 @@ export default function AthleteHomeDash({
         </div>
       )}
 
+      {/* Leaderboard */}
+      {todayWOD && (
+        <Leaderboard
+          date={todayWOD.date}
+          wodType={todayWOD.type}
+          wodName={todayWOD.name}
+          currentUserId={currentUser.id}
+        />
+      )}
+
       {/* Missed WODs Section */}
       {missedWODs.length > 0 && (
         <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-5 sm:p-6 mb-6 border border-amber-500/30">
@@ -359,7 +384,26 @@ export default function AthleteHomeDash({
         </div>
       )}
 
-      {/* Recent Activity */}
+      {/* Activity Feed Link */}
+      <button
+        onClick={() => navigate('feed')}
+        className="w-full bg-slate-800/80 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-slate-700/50 text-left flex items-center justify-between hover:border-red-600/30 transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="bg-red-600/20 p-2 rounded-lg">
+            <Dumbbell className="w-4 h-4 text-red-400" />
+          </div>
+          <div>
+            <div className="text-white font-semibold text-sm">Activity Feed</div>
+            <div className="text-slate-400 text-xs">See what everyone's been doing</div>
+          </div>
+        </div>
+        <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+
+      {/* Recent Workouts */}
       <div className="bg-slate-800 rounded-2xl p-5 sm:p-6 border border-slate-700">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-lg font-bold text-white">Recent Workouts</h3>
@@ -499,6 +543,21 @@ export default function AthleteHomeDash({
                             </div>
                           )}
                         </div>
+
+                        {/* Social: Reactions & Comments */}
+                        <ReactionBar
+                          resultId={result.id}
+                          reactions={reactions[result.id] || []}
+                          currentUserId={currentUser.id}
+                          onToggleReaction={onToggleReaction}
+                        />
+                        <CommentThread
+                          resultId={result.id}
+                          comments={comments[result.id] || []}
+                          currentUser={currentUser}
+                          onPost={onPostComment}
+                          onDelete={onDeleteComment}
+                        />
 
                         {result.photoData && (
                           <div
