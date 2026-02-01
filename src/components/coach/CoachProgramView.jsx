@@ -83,7 +83,9 @@ export default function CoachProgramView({
                 const coachHasResult = workoutResults.find(r =>
                   r.date === wod.date && r.athleteEmail === currentUser.email
                 );
-                const completedCount = allAthleteResults.filter(r => r.wodId === wod.id).length;
+                const completedCount = allAthleteResults.filter(r =>
+                  r.wodId === wod.id || (r.date === wod.date && !r.customWodName && !r.customWodType)
+                ).length;
                 const isTappable = completedCount > 0 && showWodReview;
 
                 return (
