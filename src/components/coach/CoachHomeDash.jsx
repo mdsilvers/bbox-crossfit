@@ -479,8 +479,7 @@ export default function CoachHomeDash({
                     {showDeleteConfirm !== result.id && (
                       <>
                         <div
-                          onClick={() => editPastWorkout(result)}
-                          className="p-4 active:bg-slate-600 transition-colors cursor-pointer"
+                          className="p-4"
                         >
                           {/* Header: WOD Name + Type + Time */}
                           <div className="flex items-start justify-between mb-2">
