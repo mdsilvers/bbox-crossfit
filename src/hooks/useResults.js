@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as db from '../lib/database';
 import { isBenchmarkWod, getBenchmarkByName } from '../lib/benchmarks';
-import { STANDARD_MOVEMENTS } from '../lib/constants';
+import { STANDARD_MOVEMENTS, getLocalToday } from '../lib/constants';
 
 export function useResults(currentUser) {
   const [workoutResults, setWorkoutResults] = useState([]);
@@ -48,7 +48,7 @@ export function useResults(currentUser) {
       const myResults = resultsData.map(r => db.resultToAppFormat(r));
       setWorkoutResults(myResults);
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalToday();
       const todayResult = myResults.find(r => r.date === today);
 
       if (todayResult) {
@@ -171,7 +171,7 @@ export function useResults(currentUser) {
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = getLocalToday();
     const wasUpdate = !!myResult.existingResultId;
 
     const resultData = {
@@ -298,7 +298,7 @@ export function useResults(currentUser) {
   const cancelEdit = (todayWOD, navigate) => {
     setEditingWorkout(null);
     if (todayWOD) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = getLocalToday();
       const todayResult = workoutResults.find(r => r.date === today);
       if (todayResult) {
         const isCustom = !!(todayResult.customWodName || todayResult.customWodType);

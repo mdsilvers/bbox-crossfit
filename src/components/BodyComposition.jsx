@@ -3,6 +3,7 @@ import { Plus, Trash2, ChevronDown, ChevronUp, Scale, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import * as db from '../lib/database';
+import { getLocalToday } from '../lib/constants';
 
 const MEASUREMENT_FIELDS = [
   { key: 'weight_kgs', label: 'Weight', unit: 'kgs', color: '#c95f5f' },
@@ -17,7 +18,7 @@ const MEASUREMENT_FIELDS = [
 ];
 
 const emptyForm = {
-  measured_at: new Date().toISOString().split('T')[0],
+  measured_at: getLocalToday(),
   weight_kgs: '',
   body_fat_pct: '',
   chest_in: '',

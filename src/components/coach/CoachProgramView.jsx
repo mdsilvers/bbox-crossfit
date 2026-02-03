@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2, Dumbbell, Calendar, Users, Image } from 'lucide-react';
 import { isBenchmarkWod, getBenchmarkByName, getBenchmarksByCategory } from '../../lib/benchmarks';
-import { STANDARD_MOVEMENTS } from '../../lib/constants';
+import { STANDARD_MOVEMENTS, getLocalToday } from '../../lib/constants';
 
 export default function CoachProgramView({
   currentUser,
@@ -52,7 +52,7 @@ export default function CoachProgramView({
                 setSelectedCoach({ id: currentUser.id, name: currentUser.name });
                 setNewWOD({
                   name: '',
-                  date: new Date().toISOString().split('T')[0],
+                  date: getLocalToday(),
                   type: 'For Time',
                   group: 'combined',
                   movements: [{ name: '', reps: '', notes: '' }],
@@ -259,7 +259,7 @@ export default function CoachProgramView({
                 setSelectedCoach({ id: currentUser.id, name: currentUser.name });
                 setNewWOD({
                   name: '',
-                  date: new Date().toISOString().split('T')[0],
+                  date: getLocalToday(),
                   type: 'For Time',
                   group: 'combined',
                   movements: [{ name: '', reps: '', notes: '' }],
@@ -575,7 +575,7 @@ export default function CoachProgramView({
                 setWodPhotoData(null);
                 setSelectedCoach({ id: currentUser.id, name: currentUser.name });
                 setNewWOD({
-                  date: new Date().toISOString().split('T')[0],
+                  date: getLocalToday(),
                   type: 'For Time',
                   group: 'combined',
                   movements: [{ name: '', reps: '', notes: '' }],

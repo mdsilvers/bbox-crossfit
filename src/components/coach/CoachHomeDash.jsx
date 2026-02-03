@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Dumbbell, Clock, Calendar, Image, Trophy } from 'lucide-react';
 import { formatScore, getScoreLabel } from '../../lib/score-utils';
 import { isBenchmarkWod } from '../../lib/benchmarks';
+import { getLocalToday } from '../../lib/constants';
 import Leaderboard from '../social/Leaderboard';
 import ReactionBar from '../social/ReactionBar';
 import CommentThread from '../social/CommentThread';
@@ -114,7 +115,7 @@ export default function CoachHomeDash({
           <div
             className="p-5 cursor-pointer active:bg-slate-700 transition-colors"
             onClick={() => {
-              const todayResult = workoutResults.find(r => r.date === new Date().toISOString().split('T')[0] && r.athleteEmail === currentUser.email);
+              const todayResult = workoutResults.find(r => r.date === getLocalToday() && r.athleteEmail === currentUser.email);
               if (todayResult) showWorkoutSummary(todayResult);
             }}
           >
@@ -214,7 +215,7 @@ export default function CoachHomeDash({
             className={`p-5 ${completedThisWod ? 'cursor-pointer active:bg-slate-700 transition-colors' : ''}`}
             onClick={() => {
               if (!completedThisWod) return;
-              const todayResult = workoutResults.find(r => r.date === new Date().toISOString().split('T')[0] && r.athleteEmail === currentUser.email);
+              const todayResult = workoutResults.find(r => r.date === getLocalToday() && r.athleteEmail === currentUser.email);
               if (todayResult) showWorkoutSummary(todayResult);
             }}
           >

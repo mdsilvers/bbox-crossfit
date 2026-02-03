@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as db from '../lib/database';
-import { STANDARD_MOVEMENTS } from '../lib/constants';
+import { STANDARD_MOVEMENTS, getLocalToday } from '../lib/constants';
 
 export function useWorkouts(currentUser) {
   const [allWODs, setAllWODs] = useState([]);
@@ -9,7 +9,7 @@ export function useWorkouts(currentUser) {
   const [showWODForm, setShowWODForm] = useState(false);
   const [newWOD, setNewWOD] = useState({
     name: '',
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalToday(),
     type: 'For Time',
     group: 'combined',
     movements: [{ name: '', reps: '', notes: '' }],
@@ -142,7 +142,7 @@ export function useWorkouts(currentUser) {
       setSelectedCoach({ id: currentUser.id, name: currentUser.name });
       setNewWOD({
         name: '',
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalToday(),
         type: 'For Time',
         group: 'combined',
         movements: [{ name: '', reps: '', notes: '' }],

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { getLocalToday } from './constants';
 
 // ==================== AUTH FUNCTIONS ====================
 
@@ -81,7 +82,7 @@ export async function getWodByDateAndGroup(date, group) {
 }
 
 export async function getTodayWod(userGroup, role) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = getLocalToday();
 
   // Coaches see any WOD for today regardless of group
   if (role === 'coach') {
@@ -118,12 +119,10 @@ export async function getAllWods() {
 }
 
 export async function getRecentWods(userGroup, daysBack = 7) {
-  const today = new Date();
-  const startDate = new Date(today);
+  const todayStr = getLocalToday();
+  const startDate = new Date();
   startDate.setDate(startDate.getDate() - daysBack);
-
-  const startDateStr = startDate.toISOString().split('T')[0];
-  const todayStr = today.toISOString().split('T')[0];
+  const startDateStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}-${String(startDate.getDate()).padStart(2, '0')}`;
 
   // Get WODs that match user's group or combined, excluding today
   const { data, error } = await supabase
