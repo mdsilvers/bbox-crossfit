@@ -44,6 +44,8 @@ export default function CoachDashboard() {
     showDeleteWODConfirm, setShowDeleteWODConfirm,
     wodPhotoData, setWodPhotoData,
     handleWodPhotoUpload,
+    coaches,
+    selectedCoach, setSelectedCoach,
     loadTodayWOD,
     loadAllWODs,
     loadMissedWODs,
@@ -322,6 +324,9 @@ export default function CoachDashboard() {
               wodPhotoData={wodPhotoData}
               setWodPhotoData={setWodPhotoData}
               handleWodPhotoUpload={handleWodPhotoUpload}
+              coaches={coaches}
+              selectedCoach={selectedCoach}
+              setSelectedCoach={setSelectedCoach}
             />
           )}
 

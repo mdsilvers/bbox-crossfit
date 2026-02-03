@@ -35,6 +35,9 @@ export default function CoachProgramView({
   wodPhotoData,
   setWodPhotoData,
   handleWodPhotoUpload,
+  coaches,
+  selectedCoach,
+  setSelectedCoach,
 }) {
   return (
     <>
@@ -46,6 +49,7 @@ export default function CoachProgramView({
               onClick={() => {
                 setEditingWOD(null);
                 setWodPhotoData(null);
+                setSelectedCoach({ id: currentUser.id, name: currentUser.name });
                 setNewWOD({
                   name: '',
                   date: new Date().toISOString().split('T')[0],
@@ -252,6 +256,7 @@ export default function CoachProgramView({
                 setShowWODForm(false);
                 setEditingWOD(null);
                 setWodPhotoData(null);
+                setSelectedCoach({ id: currentUser.id, name: currentUser.name });
                 setNewWOD({
                   name: '',
                   date: new Date().toISOString().split('T')[0],
@@ -270,6 +275,31 @@ export default function CoachProgramView({
               </svg>
             </button>
           </div>
+
+          {/* Posted By Selector */}
+          {coaches.length > 1 && (
+            <div className="mb-4">
+              <label className="block text-slate-300 text-sm font-medium mb-2">
+                Posted by
+              </label>
+              <select
+                value={selectedCoach?.id || currentUser.id}
+                onChange={(e) => {
+                  const coach = coaches.find(c => c.id === e.target.value);
+                  if (coach) {
+                    setSelectedCoach({ id: coach.id, name: coach.name });
+                  }
+                }}
+                className="w-full bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none text-sm"
+              >
+                {coaches.map(coach => (
+                  <option key={coach.id} value={coach.id}>
+                    {coach.name}{coach.id === currentUser.id ? ' (You)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Benchmark WOD Selector */}
           <div className="mb-4">
@@ -543,6 +573,7 @@ export default function CoachProgramView({
                 setShowWODForm(false);
                 setEditingWOD(null);
                 setWodPhotoData(null);
+                setSelectedCoach({ id: currentUser.id, name: currentUser.name });
                 setNewWOD({
                   date: new Date().toISOString().split('T')[0],
                   type: 'For Time',

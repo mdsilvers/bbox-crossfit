@@ -146,19 +146,26 @@ export async function createWod(wod, userId, userName) {
   return data;
 }
 
-export async function updateWod(id, wod) {
+export async function updateWod(id, wod, coachId, coachName) {
+  const updates = {
+    name: wod.name || null,
+    date: wod.date,
+    type: wod.type,
+    group_type: wod.group,
+    movements: wod.movements,
+    notes: wod.notes || null,
+    photo_url: wod.photoData || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (coachId) {
+    updates.posted_by = coachId;
+    updates.posted_by_name = coachName;
+  }
+
   const { data, error } = await supabase
     .from('wods')
-    .update({
-      name: wod.name || null,
-      date: wod.date,
-      type: wod.type,
-      group_type: wod.group,
-      movements: wod.movements,
-      notes: wod.notes || null,
-      photo_url: wod.photoData || null,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updates)
     .eq('id', id)
     .select()
     .single();
@@ -589,6 +596,19 @@ export async function updateProfileStreak(userId, streakWeeks, bestStreak) {
   if (error) throw error;
 }
 
+// ==================== COACH FUNCTIONS ====================
+
+export async function getAllCoaches() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, name, email')
+    .eq('role', 'coach')
+    .order('name');
+
+  if (error) throw error;
+  return data || [];
+}
+
 // ==================== HELPER FUNCTIONS ====================
 
 // Transform Supabase profile to app user format
@@ -616,6 +636,7 @@ export function wodToAppFormat(wod) {
     movements: wod.movements,
     notes: wod.notes,
     photoData: wod.photo_url,
+    postedById: wod.posted_by,
     postedBy: wod.posted_by_name,
     postedAt: wod.created_at,
   };

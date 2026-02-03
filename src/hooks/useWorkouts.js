@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as db from '../lib/database';
 import { STANDARD_MOVEMENTS } from '../lib/constants';
 
@@ -21,6 +21,18 @@ export function useWorkouts(currentUser) {
   const [editingWOD, setEditingWOD] = useState(null);
   const [showDeleteWODConfirm, setShowDeleteWODConfirm] = useState(null);
   const [wodPhotoData, setWodPhotoData] = useState(null);
+  const [coaches, setCoaches] = useState([]);
+  const [selectedCoach, setSelectedCoach] = useState(
+    currentUser ? { id: currentUser.id, name: currentUser.name } : null
+  );
+
+  useEffect(() => {
+    if (currentUser?.role === 'coach') {
+      db.getAllCoaches()
+        .then(setCoaches)
+        .catch(err => console.error('Error loading coaches:', err));
+    }
+  }, [currentUser?.id, currentUser?.role]);
 
   const handleWodPhotoUpload = (e) => {
     const file = e.target.files[0];
@@ -114,10 +126,12 @@ export function useWorkouts(currentUser) {
 
       const wodWithPhoto = { ...newWOD, photoData: wodPhotoData };
 
+      const coach = selectedCoach || { id: currentUser.id, name: currentUser.name };
+
       if (editingWOD) {
-        await db.updateWod(editingWOD.id, wodWithPhoto);
+        await db.updateWod(editingWOD.id, wodWithPhoto, coach.id, coach.name);
       } else {
-        await db.createWod(wodWithPhoto, currentUser.id, currentUser.name);
+        await db.createWod(wodWithPhoto, coach.id, coach.name);
       }
 
       const action = editingWOD ? 'updated' : 'posted';
@@ -125,6 +139,7 @@ export function useWorkouts(currentUser) {
       setShowWODForm(false);
       setEditingWOD(null);
       setWodPhotoData(null);
+      setSelectedCoach({ id: currentUser.id, name: currentUser.name });
       setNewWOD({
         name: '',
         date: new Date().toISOString().split('T')[0],
@@ -156,6 +171,9 @@ export function useWorkouts(currentUser) {
     setWodPhotoData(wod.photoData || null);
     setMovementInput(wod.movements.map(m => m.name));
     setShowMovementDropdown(wod.movements.map(() => false));
+    if (wod.postedById) {
+      setSelectedCoach({ id: wod.postedById, name: wod.postedBy });
+    }
     setShowWODForm(true);
     if (navigate) navigate('program');
   };
@@ -275,6 +293,8 @@ export function useWorkouts(currentUser) {
     showDeleteWODConfirm, setShowDeleteWODConfirm,
     wodPhotoData, setWodPhotoData,
     handleWodPhotoUpload,
+    coaches,
+    selectedCoach, setSelectedCoach,
     loadTodayWOD,
     loadAllWODs,
     loadMissedWODs,
