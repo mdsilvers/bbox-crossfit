@@ -49,7 +49,7 @@ export function useWorkouts(currentUser) {
     if (!currentUser) return null;
 
     try {
-      const wodData = await db.getTodayWod(currentUser.group);
+      const wodData = await db.getTodayWod(currentUser.group, currentUser.role);
       if (wodData) {
         const wod = db.wodToAppFormat(wodData);
         setTodayWOD(wod);

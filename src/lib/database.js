@@ -80,13 +80,26 @@ export async function getWodByDateAndGroup(date, group) {
   return data;
 }
 
-export async function getTodayWod(userGroup) {
+export async function getTodayWod(userGroup, role) {
   const today = new Date().toISOString().split('T')[0];
 
-  // Try combined first
+  // Coaches see any WOD for today regardless of group
+  if (role === 'coach') {
+    const { data, error } = await supabase
+      .from('wods')
+      .select('*')
+      .eq('date', today)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  }
+
+  // Athletes: try combined first, then their specific group
   let wod = await getWodByDateAndGroup(today, 'combined');
 
-  // If no combined WOD, try user's specific group
   if (!wod && userGroup) {
     wod = await getWodByDateAndGroup(today, userGroup);
   }
