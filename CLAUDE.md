@@ -79,12 +79,13 @@ results (id, wod_id, athlete_id, athlete_name, athlete_email, date, time, moveme
 
 ```
 src/
-├── crossfit-box-app.jsx  # Main React app (~3200 lines)
+├── crossfit-box-app.jsx  # Main React app (~4000 lines)
 ├── main.jsx              # React entry point
 ├── index.css             # Tailwind imports + custom utilities
 └── lib/
     ├── supabase.js       # Supabase client initialization
-    └── database.js       # Database service layer (all CRUD operations)
+    ├── database.js       # Database service layer (all CRUD operations)
+    └── benchmarks.js     # Benchmark WOD definitions (46 workouts)
 
 supabase-schema.sql       # Database schema with RLS policies
 ```
@@ -142,6 +143,7 @@ All workout history views are sorted by WOD date (latest first), not by logged/c
 - View all athletes and their workout history
 - Log own workouts
 - WOD conflict validation
+- Benchmark WOD templates (quick-fill from 46 standard CrossFit benchmarks)
 
 ### Athlete Features
 - View today's WOD
@@ -150,11 +152,29 @@ All workout history views are sorted by WOD date (latest first), not by logged/c
 - View workout history
 - Log missed WODs (past 7 days)
 - Edit/delete own results
+- Personal Records tracking for benchmark WODs
+
+### Benchmark WODs
+46 standard CrossFit benchmarks stored in `src/lib/benchmarks.js`:
+- **Girl WODs** (30): Fran, Cindy, Diane, Grace, Helen, etc.
+- **Strength** (10): 3RM Deadlift, 3RM Back Squat, etc.
+- **Cardio** (6): 500m Row, 2K Row, 50 Cal Bike, etc.
+
+Coach workflow:
+1. In WOD form, select benchmark from dropdown
+2. Name, type, and movements auto-fill
+3. Yellow "Benchmark" badge displays in history
+
+PR tracking:
+- Only coach-posted benchmark WODs count toward PRs
+- Custom workouts block benchmark names (validation)
+- Athlete dashboard shows Personal Records section with top 5 PRs
 
 ### UI Features
 - Photo modal (click to view full-screen)
 - Workout type badges on all history views (red for coach WODs, violet for custom)
 - Custom workout indicator badges in history
+- Benchmark badges (yellow) in history for benchmark WODs
 - Responsive design (mobile-first)
 
 ---
@@ -204,6 +224,9 @@ Add to `src/index.css` - Tailwind v4 requires explicit utility definitions for s
 5. **Custom Workout:** Log custom WOD (no coach WOD) → Verify violet badge + "Custom" label in history
 6. **Missed WODs:** Verify past WODs appear, can log them
 7. **Athletes Tab:** Must show ALL athletes, not just coach (including custom workouts)
+8. **Benchmark WOD (Coach):** Select "Fran" from dropdown → Verify auto-fill → Post → Verify yellow badge
+9. **Benchmark PR (Athlete):** Log result for benchmark WOD → Verify PR appears in Dashboard
+10. **Custom Workout Validation:** Try naming custom workout "Fran" → Should show error and block submission
 
 ---
 

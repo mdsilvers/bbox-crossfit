@@ -52,7 +52,7 @@ export default function BodyComposition({ currentUser }) {
       const data = await db.getBodyMeasurements(currentUser.id);
       setMeasurements(data);
     } catch (err) {
-      console.log('Error loading measurements:', err);
+      console.error('Error loading measurements:', err);
     }
     setLoading(false);
   };

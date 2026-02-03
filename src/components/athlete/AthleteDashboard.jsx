@@ -81,21 +81,31 @@ export default function AthleteDashboard() {
     const loadData = async () => {
       if (!currentUser) return;
 
+      // Phase 1: Today's WOD needed by loadMyResults
       const wod = await loadTodayWOD();
-      const results = await loadMyResults(wod, null);
-      await loadMissedWODs(results, workoutResults);
-      await loadAllResults();
-      const wods = await loadAllWODs();
+
+      // Phase 2: Independent data loads
+      const [results, , wods] = await Promise.all([
+        loadMyResults(wod, null),
+        loadAllResults(),
+        loadAllWODs(),
+      ]);
+
+      // Phase 3: Depends on results & wods
+      await loadMissedWODs(results);
       const prs = calculateBenchmarkPRs(results, wods);
       setBenchmarkPRs(prs);
-      await badges.loadMyBadges();
-      await badges.checkAndAwardBadges(results, wods, prs);
-      // Load social data for recent results
+
+      // Phase 4: Badges & social (depend on phase 3)
       const resultIds = results.slice(0, 10).map(r => r.id);
-      if (resultIds.length > 0) {
-        await social.loadReactionsForResults(resultIds);
-        await social.loadCommentsForResults(resultIds);
-      }
+      await Promise.all([
+        badges.loadMyBadges(),
+        badges.checkAndAwardBadges(results, wods, prs),
+        ...(resultIds.length > 0 ? [
+          social.loadReactionsForResults(resultIds),
+          social.loadCommentsForResults(resultIds),
+        ] : []),
+      ]);
     };
     loadData();
   }, [currentUser]);
@@ -229,13 +239,13 @@ export default function AthleteDashboard() {
               setCustomWodNameError={setCustomWodNameError}
               allWODs={allWODs}
               logResult={() => logResult(todayWOD, allWODs, async (results) => {
-                await loadMissedWODs(results, workoutResults);
+                await loadMissedWODs(results);
                 const prs = calculateBenchmarkPRs(results, allWODs);
                 setBenchmarkPRs(prs);
                 await badges.checkAndAwardBadges(results, allWODs, prs);
               })}
               logCustomWorkout={() => logCustomWorkout(allWODs, async (results) => {
-                await loadMissedWODs(results, workoutResults);
+                await loadMissedWODs(results);
                 const prs = calculateBenchmarkPRs(results, allWODs);
                 setBenchmarkPRs(prs);
                 await badges.checkAndAwardBadges(results, allWODs, prs);

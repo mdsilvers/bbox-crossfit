@@ -120,9 +120,11 @@ export default function PostWodSummary({
             )}
             {result?.rx !== undefined && (
               <span className={`text-xs px-2 py-1 rounded-lg font-semibold ${
-                result.rx !== false ? 'bg-green-600/20 text-green-400' : 'bg-amber-600/20 text-amber-400'
+                result.rx === 'sweat' ? 'bg-amber-600/20 text-amber-400'
+                : result.rx === 'train' || result.rx === false ? 'bg-blue-600/20 text-blue-400'
+                : 'bg-green-600/20 text-green-400'
               }`}>
-                {result.rx !== false ? 'RX' : 'Scaled'}
+                {result.rx === 'sweat' ? 'Sweat' : result.rx === 'train' || result.rx === false ? 'Train' : 'RX'}
               </span>
             )}
           </div>

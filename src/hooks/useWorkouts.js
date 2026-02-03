@@ -35,7 +35,7 @@ export function useWorkouts(currentUser) {
         return null;
       }
     } catch {
-      console.log('No WOD posted for today');
+      // No WOD posted for today — expected
       setTodayWOD(null);
       return null;
     }
@@ -48,7 +48,7 @@ export function useWorkouts(currentUser) {
       setAllWODs(wods);
       return wods;
     } catch (error) {
-      console.log('Error loading WODs:', error);
+      console.error('Error loading WODs:', error);
       setAllWODs([]);
       return [];
     }
@@ -67,7 +67,7 @@ export function useWorkouts(currentUser) {
       const missed = recentWods.filter(wod => !loggedDates.has(wod.date));
       setMissedWODs(missed);
     } catch (error) {
-      console.log('Error loading missed WODs:', error);
+      console.error('Error loading missed WODs:', error);
       setMissedWODs([]);
     }
   };

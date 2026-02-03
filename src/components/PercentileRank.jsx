@@ -52,13 +52,13 @@ export default function PercentileRank({ currentUser, workoutResults, allWODs, o
             const data = await db.getAllResultsForBenchmark(wodIds);
             results[name] = data.map(r => db.resultToAppFormat(r));
           } catch (err) {
-            console.log(`Error loading benchmark results for ${name}:`, err);
+            console.error(`Error loading benchmark results for ${name}:`, err);
             results[name] = [];
           }
         }
         setAllBenchmarkResults(results);
       } catch (err) {
-        console.log('Error loading benchmark results:', err);
+        console.error('Error loading benchmark results:', err);
       }
       setLoading(false);
     };

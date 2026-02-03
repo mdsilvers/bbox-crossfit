@@ -111,7 +111,7 @@ export default function CoachWorkoutView({
           )}
 
           <RxToggle
-            value={myResult.rx !== undefined ? myResult.rx : true}
+            value={myResult.rx ?? true}
             onChange={(val) => setMyResult({ ...myResult, rx: val })}
           />
 
@@ -337,7 +337,7 @@ export default function CoachWorkoutView({
 
           {/* RX/Scaled Toggle */}
           <RxToggle
-            value={myResult.rx !== undefined ? myResult.rx : true}
+            value={myResult.rx ?? true}
             onChange={(val) => setMyResult({ ...myResult, rx: val })}
           />
 

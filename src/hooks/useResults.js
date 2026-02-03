@@ -11,7 +11,7 @@ export function useResults(currentUser) {
     movements: [],
     notes: '',
     photoData: null,
-    rx: true,
+    rx: 'rx',
   });
   const [editingWorkout, setEditingWorkout] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
@@ -61,7 +61,7 @@ export function useResults(currentUser) {
             movements: todayResult.movements,
             notes: todayResult.notes,
             photoData: todayResult.photoData,
-            rx: todayResult.rx !== undefined ? todayResult.rx : true,
+            rx: todayResult.rx ?? 'rx',
             existingResultId: todayResult.id,
             isCustomResult: isCustom,
             customWodName: todayResult.customWodName,
@@ -76,7 +76,7 @@ export function useResults(currentUser) {
             movements: currentWOD.movements.map(m => ({ ...m, weight: '' })),
             notes: '',
             photoData: null,
-            rx: true,
+            rx: 'rx',
             existingResultId: todayResult.id,
             existingResultForDifferentWod: true,
           });
@@ -87,13 +87,13 @@ export function useResults(currentUser) {
           movements: currentWOD.movements.map(m => ({ ...m, weight: '' })),
           notes: '',
           photoData: null,
-          rx: true,
+          rx: 'rx',
         });
       }
 
       return myResults;
     } catch (error) {
-      console.log('No results yet', error);
+      console.error('Error loading results:', error);
       return [];
     }
   };
@@ -104,7 +104,7 @@ export function useResults(currentUser) {
       const allResults = resultsData.map(r => db.resultToAppFormat(r));
       setAllAthleteResults(allResults);
     } catch (error) {
-      console.log('Error loading results:', error);
+      console.error('Error loading all results:', error);
       setAllAthleteResults([]);
     }
   };
@@ -123,7 +123,7 @@ export function useResults(currentUser) {
       movements: myResult.movements,
       notes: myResult.notes,
       photoData: myResult.photoData,
-      rx: myResult.rx !== undefined ? myResult.rx : true,
+      rx: myResult.rx || 'rx',
     };
 
     try {
@@ -181,7 +181,7 @@ export function useResults(currentUser) {
       movements: validMovements.map(m => ({ ...m, weight: '' })),
       notes: myResult.notes,
       photoData: myResult.photoData,
-      rx: myResult.rx !== undefined ? myResult.rx : true,
+      rx: myResult.rx || 'rx',
       customWodName: customWod.name || null,
       customWodType: customWod.type,
     };
@@ -232,7 +232,7 @@ export function useResults(currentUser) {
       movements: wod.movements.map(m => ({ ...m, weight: '' })),
       notes: '',
       photoData: null,
-      rx: true,
+      rx: 'rx',
     });
     setIsCustomWorkout(false);
     if (navigate) navigate('workout');
@@ -253,7 +253,7 @@ export function useResults(currentUser) {
       movements: [],
       notes: '',
       photoData: null,
-      rx: true,
+      rx: 'rx',
     });
     if (navigate) navigate('workout');
   };
@@ -278,7 +278,7 @@ export function useResults(currentUser) {
       movements: result.movements,
       notes: result.notes,
       photoData: result.photoData,
-      rx: result.rx !== undefined ? result.rx : true,
+      rx: result.rx ?? 'rx',
       existingResultId: result.id
     });
     if (navigate) navigate('workout');
@@ -307,7 +307,7 @@ export function useResults(currentUser) {
           movements: todayResult.movements,
           notes: todayResult.notes,
           photoData: todayResult.photoData,
-          rx: todayResult.rx !== undefined ? todayResult.rx : true,
+          rx: todayResult.rx ?? 'rx',
           existingResultId: todayResult.id,
           isCustomResult: isCustom,
           customWodName: todayResult.customWodName,
@@ -319,7 +319,7 @@ export function useResults(currentUser) {
           movements: todayWOD.movements.map(m => ({ ...m, weight: '' })),
           notes: '',
           photoData: null,
-          rx: true,
+          rx: 'rx',
         });
       }
     }

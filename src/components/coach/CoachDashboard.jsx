@@ -106,22 +106,33 @@ export default function CoachDashboard() {
     const loadData = async () => {
       if (!currentUser) return;
 
+      // Phase 1: Today's WOD needed by loadMyResults
       const wod = await loadTodayWOD();
-      const myResults = await loadMyResults(wod, null);
-      const wods = await loadAllWODs();
-      await loadAllResults();
-      await loadMissedWODs(myResults, workoutResults);
+
+      // Phase 2: Independent data loads
+      const [myResults, , wods] = await Promise.all([
+        loadMyResults(wod, null),
+        loadAllResults(),
+        loadAllWODs(),
+      ]);
+
+      // Phase 3: Depends on results & wods
+      await loadMissedWODs(myResults);
       const prs = calculateBenchmarkPRs(myResults, wods);
       setBenchmarkPRs(prs);
       setDataLoaded(true);
-      await badgesHook.loadMyBadges();
-      await badgesHook.loadAllUserBadges();
-      await badgesHook.checkAndAwardBadges(myResults, wods, prs);
+
+      // Phase 4: Badges & social (depend on phase 3)
       const resultIds = myResults.slice(0, 10).map(r => r.id);
-      if (resultIds.length > 0) {
-        await social.loadReactionsForResults(resultIds);
-        await social.loadCommentsForResults(resultIds);
-      }
+      await Promise.all([
+        badgesHook.loadMyBadges(),
+        badgesHook.loadAllUserBadges(),
+        badgesHook.checkAndAwardBadges(myResults, wods, prs),
+        ...(resultIds.length > 0 ? [
+          social.loadReactionsForResults(resultIds),
+          social.loadCommentsForResults(resultIds),
+        ] : []),
+      ]);
     };
     loadData();
   }, [currentUser]);
@@ -135,7 +146,7 @@ export default function CoachDashboard() {
 
   // Callback after result logging to recalculate PRs and refresh missed WODs
   const handleResultSuccess = async (freshResults) => {
-    await loadMissedWODs(freshResults, workoutResults);
+    await loadMissedWODs(freshResults);
     const prs = calculateBenchmarkPRs(freshResults, allWODs);
     setBenchmarkPRs(prs);
     await badgesHook.checkAndAwardBadges(freshResults, allWODs, prs);
@@ -143,7 +154,7 @@ export default function CoachDashboard() {
 
   // Callback after custom workout logging
   const handleCustomSuccess = async (freshResults) => {
-    await loadMissedWODs(freshResults, workoutResults);
+    await loadMissedWODs(freshResults);
     const prs = calculateBenchmarkPRs(freshResults, allWODs);
     setBenchmarkPRs(prs);
     await badgesHook.checkAndAwardBadges(freshResults, allWODs, prs);

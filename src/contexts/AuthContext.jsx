@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
           if (mounted) setCurrentUser(user);
         }
       } catch (error) {
-        console.log('No user logged in or session expired:', error.message);
+        // No session or expired — expected for logged-out users
         // Clear any stale session
         await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       }

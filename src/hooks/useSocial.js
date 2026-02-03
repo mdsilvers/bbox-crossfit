@@ -1,9 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import * as db from '../lib/database';
 
 export function useSocial(currentUser) {
   const [reactions, setReactions] = useState({});  // resultId -> reaction[]
   const [comments, setComments] = useState({});    // resultId -> comment[]
+  const reactionsRef = useRef(reactions);
+  reactionsRef.current = reactions;
+  const commentsRef = useRef(comments);
+  commentsRef.current = comments;
   const [loadingReactions, setLoadingReactions] = useState(false);
   const [loadingComments, setLoadingComments] = useState({});
 
@@ -36,7 +40,7 @@ export function useSocial(currentUser) {
   const toggleReaction = useCallback(async (resultId, reactionType) => {
     if (!currentUser) return;
 
-    const existing = (reactions[resultId] || []).find(
+    const existing = (reactionsRef.current[resultId] || []).find(
       r => r.user_id === currentUser.id && r.reaction_type === reactionType
     );
 
@@ -85,7 +89,7 @@ export function useSocial(currentUser) {
         console.error('Error adding reaction:', error);
       }
     }
-  }, [currentUser, reactions]);
+  }, [currentUser]);
 
   // ==================== COMMENTS ====================
 
@@ -140,7 +144,7 @@ export function useSocial(currentUser) {
   }, [currentUser]);
 
   const removeComment = useCallback(async (resultId, commentId) => {
-    const prev = comments[resultId] || [];
+    const prev = commentsRef.current[resultId] || [];
     // Optimistic
     setComments(p => ({
       ...p,
@@ -153,7 +157,7 @@ export function useSocial(currentUser) {
       setComments(p => ({ ...p, [resultId]: prev }));
       console.error('Error deleting comment:', error);
     }
-  }, [comments]);
+  }, []);
 
   return {
     reactions,

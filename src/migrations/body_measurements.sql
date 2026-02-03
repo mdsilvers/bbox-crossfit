@@ -23,9 +23,15 @@ ALTER TABLE body_measurements ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can manage their own measurements"
   ON body_measurements FOR ALL USING (auth.uid() = user_id);
 
-CREATE POLICY "Coaches can view all measurements"
+CREATE POLICY "Coaches can view athlete measurements"
   ON body_measurements FOR SELECT
-  USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role = 'coach'));
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles coach, profiles athlete
+      WHERE coach.id = auth.uid() AND coach.role = 'coach'
+      AND athlete.id = body_measurements.user_id AND athlete.role = 'athlete'
+    )
+  );
 
 -- Migration: Rename weight_lbs to weight_kgs
 -- Run this if the table was already created with the weight_lbs column

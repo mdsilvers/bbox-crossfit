@@ -66,16 +66,6 @@ export async function getProfile(userId) {
   return data;
 }
 
-export async function getAllProfiles() {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('name');
-
-  if (error) throw error;
-  return data;
-}
-
 // ==================== WOD FUNCTIONS ====================
 
 export async function getWodByDateAndGroup(date, group) {
@@ -251,11 +241,17 @@ export async function getResultsByAthlete(athleteId) {
   return data || [];
 }
 
-export async function getAllResults() {
-  const { data, error } = await supabase
+export async function getAllResults(limit) {
+  let query = supabase
     .from('results')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (limit) {
+    query = query.limit(limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return data || [];
@@ -288,7 +284,7 @@ export async function createResult(result, userId, userName, userEmail) {
       photo_url: result.photoData || null,
       custom_wod_name: result.customWodName || null,
       custom_wod_type: result.customWodType || null,
-      rx: result.rx !== undefined ? result.rx : true,
+      rx: result.rx ?? 'rx',
     })
     .select()
     .single();
@@ -307,7 +303,7 @@ export async function updateResult(id, result) {
       photo_url: result.photoData || null,
       custom_wod_name: result.customWodName || null,
       custom_wod_type: result.customWodType || null,
-      rx: result.rx !== undefined ? result.rx : true,
+      rx: result.rx ?? 'rx',
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -638,7 +634,7 @@ export function resultToAppFormat(result) {
     photoData: result.photo_url,
     customWodName: result.custom_wod_name,
     customWodType: result.custom_wod_type,
-    rx: result.rx !== undefined ? result.rx : true,
+    rx: result.rx ?? 'rx',
     loggedAt: result.created_at,
   };
 }

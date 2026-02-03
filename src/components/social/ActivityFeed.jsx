@@ -106,8 +106,8 @@ export default function ActivityFeed({ currentUser, allWODs, reactions = {}, onT
     setLoading(true);
     try {
       const items = [];
-      const allResults = await db.getAllResults();
-      const recentResults = allResults.slice(0, 50).map(r => db.resultToAppFormat(r));
+      const recentResultsRaw = await db.getAllResults(50);
+      const recentResults = recentResultsRaw.map(r => db.resultToAppFormat(r));
       const resultIds = [];
 
       recentResults.forEach(result => {

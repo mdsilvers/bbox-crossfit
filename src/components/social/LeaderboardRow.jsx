@@ -125,12 +125,14 @@ export default function LeaderboardRow({ rank, result, wodType, isCurrentUser, r
         </div>
       )}
 
-      {/* RX Badge */}
+      {/* Workout Mode Badge */}
       {!isUnranked && (
         <span className={`text-xs px-1.5 py-0.5 rounded font-semibold flex-shrink-0 ${
-          result.rx !== false ? 'bg-green-600/20 text-green-400' : 'bg-amber-600/20 text-amber-400'
+          result.rx === 'sweat' ? 'bg-amber-600/20 text-amber-400'
+          : result.rx === 'train' || result.rx === false ? 'bg-blue-600/20 text-blue-400'
+          : 'bg-green-600/20 text-green-400'
         }`}>
-          {result.rx !== false ? 'RX' : 'SC'}
+          {result.rx === 'sweat' ? 'SW' : result.rx === 'train' || result.rx === false ? 'TR' : 'RX'}
         </span>
       )}
 
