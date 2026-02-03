@@ -151,14 +151,16 @@ export function AuthProvider({ children }) {
         clearSupabaseStorage();
       }
 
-      if (error.message?.includes('Invalid login')) {
+      if (error.message?.includes('Invalid login') || error.message?.includes('invalid_credentials')) {
         setAuthError('Incorrect email or password. Please try again.');
       } else if (error.message?.includes('Email not confirmed')) {
         setAuthError('Please confirm your email address before logging in. Check your inbox for the confirmation link.');
       } else if (error.message?.includes('timed out')) {
         setAuthError('Login timed out. Session cleared - please try again.');
+      } else if (error.message?.includes('fetch') || error.message?.includes('Failed to fetch') || error.message?.includes('Invalid value')) {
+        setAuthError('Unable to connect. Please check your internet connection and try again.');
       } else {
-        setAuthError(error.message || 'Error logging in. Please try again.');
+        setAuthError('Incorrect email or password. Please try again.');
       }
     } finally {
       setAuthLoading(false);
