@@ -145,18 +145,28 @@ export default function AthleteHomeDash({
           {/* Custom workout movements */}
           <div className="bg-slate-700/50 rounded-xl p-4 mb-4">
             <div className="space-y-2">
-              {myResult.movements.map((movement, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <div className="bg-violet-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
-                    {idx + 1}
+              {(() => { let num = 0; return myResult.movements.map((movement, idx) => {
+                if (movement.type === 'header') {
+                  return (
+                    <div key={idx} className="border-l-4 border-amber-500 pl-4 py-1">
+                      <div className="text-amber-400 text-xs font-semibold uppercase tracking-wider">{movement.name}</div>
+                    </div>
+                  );
+                }
+                num++;
+                return (
+                  <div key={idx} className="flex items-center gap-3">
+                    <div className="bg-violet-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                      {num}
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-white font-medium">{movement.name}</span>
+                      {movement.reps && <span className="text-slate-400 ml-2 text-sm">{movement.reps}</span>}
+                      {movement.weight && <span className="text-slate-400 ml-2 text-sm">@ {movement.weight}</span>}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <span className="text-white font-medium">{movement.name}</span>
-                    {movement.reps && <span className="text-slate-400 ml-2 text-sm">{movement.reps}</span>}
-                    {movement.weight && <span className="text-slate-400 ml-2 text-sm">@ {movement.weight}</span>}
-                  </div>
-                </div>
-              ))}
+                );
+              }); })()}
             </div>
           </div>
 
@@ -243,20 +253,30 @@ export default function AthleteHomeDash({
           {/* WOD Details Preview */}
           <div className="bg-slate-700/50 rounded-xl p-4 sm:p-5 mb-5">
             <div className="space-y-3">
-              {todayWOD.movements.map((movement, idx) => (
-                <div key={idx} className="flex items-start gap-3">
-                  <div className="bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
-                    {idx + 1}
+              {(() => { let num = 0; return todayWOD.movements.map((movement, idx) => {
+                if (movement.type === 'header') {
+                  return (
+                    <div key={idx} className="border-l-4 border-amber-500 pl-4 py-1">
+                      <div className="text-amber-400 text-sm font-semibold uppercase tracking-wider">{movement.name}</div>
+                    </div>
+                  );
+                }
+                num++;
+                return (
+                  <div key={idx} className="flex items-start gap-3">
+                    <div className="bg-red-600 text-white w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                      {num}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-white font-semibold">{movement.name}</div>
+                      <div className="text-slate-300 text-sm">{movement.reps}</div>
+                      {movement.notes && (
+                        <div className="text-slate-400 text-sm mt-1">{movement.notes}</div>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="text-white font-semibold">{movement.name}</div>
-                    <div className="text-slate-300 text-sm">{movement.reps}</div>
-                    {movement.notes && (
-                      <div className="text-slate-400 text-sm mt-1">{movement.notes}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              }); })()}
             </div>
 
             {todayWOD.notes && (
@@ -390,7 +410,7 @@ export default function AthleteHomeDash({
                       {wod.name || `${wod.type} Workout`}
                     </div>
                     <div className="text-slate-400 text-sm">
-                      {wod.movements.length} movement{wod.movements.length !== 1 ? 's' : ''} • {wod.movements.slice(0, 2).map(m => m.name).join(', ')}{wod.movements.length > 2 ? '...' : ''}
+                      {wod.movements.filter(m => m.type !== 'header').length} movement{wod.movements.filter(m => m.type !== 'header').length !== 1 ? 's' : ''} • {wod.movements.filter(m => m.type !== 'header').slice(0, 2).map(m => m.name).join(', ')}{wod.movements.filter(m => m.type !== 'header').length > 2 ? '...' : ''}
                     </div>
                   </div>
                   <button
@@ -537,21 +557,26 @@ export default function AthleteHomeDash({
                         </div>
 
                         {/* Movement Pills */}
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {result.movements.slice(0, 3).map((movement, idx) => (
-                            <div key={idx} className="bg-slate-700 px-3 py-1 rounded-full text-sm">
-                              <span className="text-white font-medium">{movement.name}</span>
-                              {movement.weight && (
-                                <span className="text-slate-400 ml-1">@ {movement.weight}</span>
+                        {(() => {
+                          const realMovements = result.movements.filter(m => m.type !== 'header');
+                          return (
+                            <div className="flex flex-wrap gap-2 mb-2">
+                              {realMovements.slice(0, 3).map((movement, idx) => (
+                                <div key={idx} className="bg-slate-700 px-3 py-1 rounded-full text-sm">
+                                  <span className="text-white font-medium">{movement.name}</span>
+                                  {movement.weight && (
+                                    <span className="text-slate-400 ml-1">@ {movement.weight}</span>
+                                  )}
+                                </div>
+                              ))}
+                              {realMovements.length > 3 && (
+                                <div className="bg-slate-700 px-3 py-1 rounded-full text-sm text-slate-400">
+                                  +{realMovements.length - 3} more
+                                </div>
                               )}
                             </div>
-                          ))}
-                          {result.movements.length > 3 && (
-                            <div className="bg-slate-700 px-3 py-1 rounded-full text-sm text-slate-400">
-                              +{result.movements.length - 3} more
-                            </div>
-                          )}
-                        </div>
+                          );
+                        })()}
 
                         {/* Social: Reactions & Comments */}
                         <ReactionBar

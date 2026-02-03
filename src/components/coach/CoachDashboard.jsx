@@ -42,6 +42,8 @@ export default function CoachDashboard() {
     filteredMovements,
     editingWOD, setEditingWOD,
     showDeleteWODConfirm, setShowDeleteWODConfirm,
+    wodPhotoData, setWodPhotoData,
+    handleWodPhotoUpload,
     loadTodayWOD,
     loadAllWODs,
     loadMissedWODs,
@@ -50,6 +52,7 @@ export default function CoachDashboard() {
     deleteWOD,
     confirmDeleteWOD,
     addMovement,
+    addSectionHeader,
     updateMovement,
     handleMovementInput,
     selectMovement,
@@ -311,10 +314,14 @@ export default function CoachDashboard() {
                 await loadAllResults();
               })}
               addMovement={addMovement}
+              addSectionHeader={addSectionHeader}
               updateMovement={updateMovement}
               handleMovementInput={handleMovementInput}
               selectMovement={selectMovement}
               removeMovement={removeMovement}
+              wodPhotoData={wodPhotoData}
+              setWodPhotoData={setWodPhotoData}
+              handleWodPhotoUpload={handleWodPhotoUpload}
             />
           )}
 

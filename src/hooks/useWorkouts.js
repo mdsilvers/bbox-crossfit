@@ -20,6 +20,18 @@ export function useWorkouts(currentUser) {
   const [filteredMovements, setFilteredMovements] = useState([]);
   const [editingWOD, setEditingWOD] = useState(null);
   const [showDeleteWODConfirm, setShowDeleteWODConfirm] = useState(null);
+  const [wodPhotoData, setWodPhotoData] = useState(null);
+
+  const handleWodPhotoUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setWodPhotoData(ev.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const loadTodayWOD = async () => {
     if (!currentUser) return null;
@@ -72,8 +84,23 @@ export function useWorkouts(currentUser) {
     }
   };
 
+  const addSectionHeader = () => {
+    const header = { name: '', reps: '', notes: '', type: 'header' };
+    const hasHeader = newWOD.movements.some(m => m.type === 'header');
+    if (!hasHeader) {
+      setNewWOD({ ...newWOD, movements: [header, ...newWOD.movements] });
+      setMovementInput(['', ...movementInput]);
+      setShowMovementDropdown([false, ...showMovementDropdown]);
+    } else {
+      setNewWOD({ ...newWOD, movements: [...newWOD.movements, header] });
+      setMovementInput([...movementInput, '']);
+      setShowMovementDropdown([...showMovementDropdown, false]);
+    }
+  };
+
   const postWOD = async (onSuccess) => {
-    if (!newWOD.movements[0].name) {
+    const hasRealMovement = newWOD.movements.some(m => m.type !== 'header' && m.name);
+    if (!hasRealMovement) {
       alert('Please add at least one movement');
       return;
     }
@@ -85,16 +112,19 @@ export function useWorkouts(currentUser) {
         return;
       }
 
+      const wodWithPhoto = { ...newWOD, photoData: wodPhotoData };
+
       if (editingWOD) {
-        await db.updateWod(editingWOD.id, newWOD);
+        await db.updateWod(editingWOD.id, wodWithPhoto);
       } else {
-        await db.createWod(newWOD, currentUser.id, currentUser.name);
+        await db.createWod(wodWithPhoto, currentUser.id, currentUser.name);
       }
 
       const action = editingWOD ? 'updated' : 'posted';
       alert(`WOD ${action} successfully!`);
       setShowWODForm(false);
       setEditingWOD(null);
+      setWodPhotoData(null);
       setNewWOD({
         name: '',
         date: new Date().toISOString().split('T')[0],
@@ -123,6 +153,7 @@ export function useWorkouts(currentUser) {
       movements: wod.movements,
       notes: wod.notes
     });
+    setWodPhotoData(wod.photoData || null);
     setMovementInput(wod.movements.map(m => m.name));
     setShowMovementDropdown(wod.movements.map(() => false));
     setShowWODForm(true);
@@ -242,6 +273,8 @@ export function useWorkouts(currentUser) {
     filteredMovements,
     editingWOD, setEditingWOD,
     showDeleteWODConfirm, setShowDeleteWODConfirm,
+    wodPhotoData, setWodPhotoData,
+    handleWodPhotoUpload,
     loadTodayWOD,
     loadAllWODs,
     loadMissedWODs,
@@ -250,6 +283,7 @@ export function useWorkouts(currentUser) {
     deleteWOD,
     confirmDeleteWOD,
     addMovement,
+    addSectionHeader,
     updateMovement,
     handleMovementInput,
     selectMovement,

@@ -150,27 +150,42 @@ export default function PostWodSummary({
           )}
 
           {/* Movements */}
-          {result.movements && result.movements.length > 0 && (
-            <div className="space-y-2">
-              {result.movements.slice(0, 3).map((movement, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white ${
-                    isCustomWorkout ? 'bg-violet-600' : 'bg-red-600'
-                  }`}>
-                    {idx + 1}
+          {result.movements && result.movements.length > 0 && (() => {
+            const realMovements = result.movements.filter(m => m.type !== 'header');
+            let movementNumber = 0;
+            return (
+              <div className="space-y-2">
+                {result.movements.slice(0, 5).map((movement, idx) => {
+                  if (movement.type === 'header') {
+                    return (
+                      <div key={idx} className="text-amber-400 text-xs font-semibold uppercase tracking-wider mt-1">
+                        {movement.name}
+                      </div>
+                    );
+                  }
+                  movementNumber++;
+                  if (movementNumber > 3) return null;
+                  return (
+                    <div key={idx} className="flex items-center gap-2">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white ${
+                        isCustomWorkout ? 'bg-violet-600' : 'bg-red-600'
+                      }`}>
+                        {movementNumber}
+                      </div>
+                      <span className="text-white text-sm font-medium">{movement.name}</span>
+                      {movement.reps && <span className="text-slate-400 text-sm">{movement.reps}</span>}
+                      {movement.weight && <span className="text-slate-400 text-sm">@ {movement.weight}</span>}
+                    </div>
+                  );
+                })}
+                {realMovements.length > 3 && (
+                  <div className="text-slate-400 text-sm ml-8">
+                    +{realMovements.length - 3} more movement{realMovements.length - 3 !== 1 ? 's' : ''}
                   </div>
-                  <span className="text-white text-sm font-medium">{movement.name}</span>
-                  {movement.reps && <span className="text-slate-400 text-sm">{movement.reps}</span>}
-                  {movement.weight && <span className="text-slate-400 text-sm">@ {movement.weight}</span>}
-                </div>
-              ))}
-              {result.movements.length > 3 && (
-                <div className="text-slate-400 text-sm ml-8">
-                  +{result.movements.length - 3} more movement{result.movements.length - 3 !== 1 ? 's' : ''}
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })()}
 
           {/* Notes */}
           {result.notes && (

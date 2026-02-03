@@ -87,22 +87,37 @@ export default function CoachWorkoutView({
 
           <div className="space-y-3 mb-4">
             {(editingWorkout ? editingWorkout.movements : todayWOD?.movements || []).map((movement, idx) => (
-              <div key={idx} className="bg-slate-700 rounded-lg p-4">
-                <div className="font-bold text-white text-lg mb-1">{movement.name}</div>
-                <div className="text-slate-400 mb-3">
-                  {movement.reps}
-                  {movement.notes && <span className="text-sm ml-2">({movement.notes})</span>}
+              movement.type === 'header' ? (
+                <div key={idx} className="border-l-4 border-amber-500 pl-4 py-2">
+                  <div className="text-amber-400 text-sm font-semibold uppercase tracking-wider">{movement.name}</div>
                 </div>
-                <input
-                  type="text"
-                  placeholder="Your weight (e.g., 34kg, scaled, bodyweight)"
-                  value={myResult.movements[idx]?.weight || ''}
-                  onChange={(e) => updateMovementWeight(idx, e.target.value)}
-                  className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
-                />
-              </div>
+              ) : (
+                <div key={idx} className="bg-slate-700 rounded-lg p-4">
+                  <div className="font-bold text-white text-lg mb-1">{movement.name}</div>
+                  <div className="text-slate-400 mb-3">
+                    {movement.reps}
+                    {movement.notes && <span className="text-sm ml-2">({movement.notes})</span>}
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Your weight (e.g., 34kg, scaled, bodyweight)"
+                    value={myResult.movements[idx]?.weight || ''}
+                    onChange={(e) => updateMovementWeight(idx, e.target.value)}
+                    className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+              )
             ))}
           </div>
+
+          {todayWOD?.photoData && !editingWorkout && (
+            <img
+              src={todayWOD.photoData}
+              alt="WOD Board"
+              className="w-full rounded-lg max-h-64 object-cover mb-4 cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => setPhotoModalUrl(todayWOD.photoData)}
+            />
+          )}
 
           {todayWOD?.notes && !editingWorkout && (
             <div className="bg-slate-700 rounded p-3 mb-4 text-slate-300 text-sm">
@@ -263,6 +278,7 @@ export default function CoachWorkoutView({
               <option value="For Time">For Time</option>
               <option value="AMRAP">AMRAP</option>
               <option value="EMOM">EMOM</option>
+              <option value="Interval">Interval</option>
               <option value="Rounds">Rounds</option>
               <option value="Strength">Strength</option>
               <option value="Skill">Skill</option>

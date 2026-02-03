@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS wods (
   group_type TEXT NOT NULL CHECK (group_type IN ('combined', 'mens', 'womens')),
   movements JSONB NOT NULL DEFAULT '[]',
   notes TEXT,
+  photo_url TEXT,
   posted_by UUID REFERENCES profiles(id),
   posted_by_name TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),

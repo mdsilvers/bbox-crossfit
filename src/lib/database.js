@@ -135,6 +135,7 @@ export async function createWod(wod, userId, userName) {
       group_type: wod.group,
       movements: wod.movements,
       notes: wod.notes || null,
+      photo_url: wod.photoData || null,
       posted_by: userId,
       posted_by_name: userName,
     })
@@ -155,6 +156,7 @@ export async function updateWod(id, wod) {
       group_type: wod.group,
       movements: wod.movements,
       notes: wod.notes || null,
+      photo_url: wod.photoData || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -613,6 +615,7 @@ export function wodToAppFormat(wod) {
     group: wod.group_type,
     movements: wod.movements,
     notes: wod.notes,
+    photoData: wod.photo_url,
     postedBy: wod.posted_by_name,
     postedAt: wod.created_at,
   };

@@ -215,21 +215,26 @@ export default function AthleteHistoryView({
                         </div>
 
                         {/* Movement Pills */}
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {result.movements.slice(0, 4).map((movement, idx) => (
-                            <div key={idx} className="bg-slate-700 px-3 py-1 rounded-full text-sm">
-                              <span className="text-white font-medium">{movement.name}</span>
-                              {movement.weight && (
-                                <span className="text-slate-400 ml-1">@ {movement.weight}</span>
+                        {(() => {
+                          const realMovements = result.movements.filter(m => m.type !== 'header');
+                          return (
+                            <div className="flex flex-wrap gap-2 mb-2">
+                              {realMovements.slice(0, 4).map((movement, idx) => (
+                                <div key={idx} className="bg-slate-700 px-3 py-1 rounded-full text-sm">
+                                  <span className="text-white font-medium">{movement.name}</span>
+                                  {movement.weight && (
+                                    <span className="text-slate-400 ml-1">@ {movement.weight}</span>
+                                  )}
+                                </div>
+                              ))}
+                              {realMovements.length > 4 && (
+                                <div className="bg-slate-700 px-3 py-1 rounded-full text-sm text-slate-400">
+                                  +{realMovements.length - 4} more
+                                </div>
                               )}
                             </div>
-                          ))}
-                          {result.movements.length > 4 && (
-                            <div className="bg-slate-700 px-3 py-1 rounded-full text-sm text-slate-400">
-                              +{result.movements.length - 4} more
-                            </div>
-                          )}
-                        </div>
+                          );
+                        })()}
 
                         {result.notes && (
                           <div className="text-slate-400 text-sm mt-2 italic">

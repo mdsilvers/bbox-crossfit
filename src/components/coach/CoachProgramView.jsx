@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Trash2, Dumbbell, Calendar, Users } from 'lucide-react';
+import { Plus, Trash2, Dumbbell, Calendar, Users, Image } from 'lucide-react';
 import { isBenchmarkWod, getBenchmarkByName, getBenchmarksByCategory } from '../../lib/benchmarks';
 import { STANDARD_MOVEMENTS } from '../../lib/constants';
 
@@ -27,10 +27,14 @@ export default function CoachProgramView({
   deleteWOD,
   confirmDeleteWOD,
   addMovement,
+  addSectionHeader,
   updateMovement,
   handleMovementInput,
   selectMovement,
   removeMovement,
+  wodPhotoData,
+  setWodPhotoData,
+  handleWodPhotoUpload,
 }) {
   return (
     <>
@@ -41,6 +45,7 @@ export default function CoachProgramView({
             <button
               onClick={() => {
                 setEditingWOD(null);
+                setWodPhotoData(null);
                 setNewWOD({
                   name: '',
                   date: new Date().toISOString().split('T')[0],
@@ -176,10 +181,16 @@ export default function CoachProgramView({
                       {/* Movement Pills */}
                       <div className="flex flex-wrap gap-2 mb-3">
                         {wod.movements.map((movement, idx) => (
-                          <div key={idx} className="bg-slate-700 px-3 py-1.5 rounded-full text-sm">
-                            <span className="text-white font-medium">{movement.name}</span>
-                            <span className="text-slate-400 ml-1 text-xs">{movement.reps}</span>
-                          </div>
+                          movement.type === 'header' ? (
+                            <div key={idx} className="w-full text-amber-400 text-xs font-semibold uppercase tracking-wider mt-1">
+                              {movement.name}
+                            </div>
+                          ) : (
+                            <div key={idx} className="bg-slate-700 px-3 py-1.5 rounded-full text-sm">
+                              <span className="text-white font-medium">{movement.name}</span>
+                              <span className="text-slate-400 ml-1 text-xs">{movement.reps}</span>
+                            </div>
+                          )
                         ))}
                       </div>
 
@@ -187,6 +198,15 @@ export default function CoachProgramView({
                         <div className="bg-slate-700 rounded p-2 text-slate-300 text-xs mb-3">
                           {wod.notes}
                         </div>
+                      )}
+
+                      {/* WOD Board Photo */}
+                      {wod.photoData && (
+                        <img
+                          src={wod.photoData}
+                          alt="WOD Board"
+                          className="w-full rounded h-32 object-cover mb-3"
+                        />
                       )}
 
                       {/* Completion count indicator */}
@@ -231,6 +251,7 @@ export default function CoachProgramView({
               onClick={() => {
                 setShowWODForm(false);
                 setEditingWOD(null);
+                setWodPhotoData(null);
                 setNewWOD({
                   name: '',
                   date: new Date().toISOString().split('T')[0],
@@ -322,6 +343,7 @@ export default function CoachProgramView({
                 <option>For Time</option>
                 <option>AMRAP</option>
                 <option>EMOM</option>
+                <option>Interval</option>
                 <option>Chipper</option>
                 <option>Strength</option>
                 <option>Metcon</option>
@@ -344,16 +366,45 @@ export default function CoachProgramView({
           <div className="mb-4">
             <div className="flex items-center justify-between mb-3">
               <label className="block text-slate-300 font-semibold text-sm">Movements</label>
-              <button
-                onClick={addMovement}
-                className="text-red-500 hover:text-red-400 flex items-center gap-1 text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Add
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={addSectionHeader}
+                  className="text-slate-400 hover:text-slate-300 flex items-center gap-1 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Section
+                </button>
+                <button
+                  onClick={addMovement}
+                  className="text-red-500 hover:text-red-400 flex items-center gap-1 text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add
+                </button>
+              </div>
             </div>
 
             {newWOD.movements.map((movement, index) => (
+              movement.type === 'header' ? (
+                <div key={index} className="border-l-4 border-amber-500 bg-slate-700/50 rounded-r-lg p-3 mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-amber-500 text-xs font-bold uppercase tracking-wider">Section</span>
+                    <input
+                      type="text"
+                      placeholder="e.g., Station 1 (4 min work, 1 min rest)"
+                      value={movement.name}
+                      onChange={(e) => updateMovement(index, 'name', e.target.value)}
+                      className="flex-1 bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-amber-500 focus:outline-none text-sm"
+                    />
+                    <button
+                      onClick={() => removeMovement(index)}
+                      className="text-red-400 hover:text-red-300"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <div key={index} className="bg-slate-700 rounded-lg p-3 mb-3">
                 <div className="flex items-start gap-2">
                   <div className="flex-1 grid grid-cols-2 gap-2">
@@ -423,6 +474,7 @@ export default function CoachProgramView({
                   )}
                 </div>
               </div>
+              )
             ))}
           </div>
 
@@ -436,6 +488,49 @@ export default function CoachProgramView({
             />
           </div>
 
+          {/* WOD Board Photo */}
+          <div className="mb-4">
+            <label className="block text-slate-300 mb-2 text-sm">WOD Board Photo <span className="text-slate-500">(Optional)</span></label>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <label className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 px-4 rounded-lg cursor-pointer text-center transition-colors flex items-center justify-center gap-2 text-sm">
+                <Image className="w-4 h-4" />
+                Take Photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleWodPhotoUpload}
+                  className="hidden"
+                />
+              </label>
+              <label className="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-2.5 px-4 rounded-lg cursor-pointer text-center transition-colors flex items-center justify-center gap-2 text-sm">
+                <Image className="w-4 h-4" />
+                Choose Photo
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleWodPhotoUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            {wodPhotoData && (
+              <div className="relative">
+                <img
+                  src={wodPhotoData}
+                  alt="WOD Board"
+                  className="w-full rounded-lg max-h-64 object-cover"
+                />
+                <button
+                  onClick={() => setWodPhotoData(null)}
+                  className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-3">
             <button
               onClick={postWOD}
@@ -447,6 +542,7 @@ export default function CoachProgramView({
               onClick={() => {
                 setShowWODForm(false);
                 setEditingWOD(null);
+                setWodPhotoData(null);
                 setNewWOD({
                   date: new Date().toISOString().split('T')[0],
                   type: 'For Time',

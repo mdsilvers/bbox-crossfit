@@ -220,7 +220,7 @@ export default function CoachAthleteList({
 
                             {/* Movements */}
                             <div className="flex flex-wrap gap-1 mb-2">
-                              {workout.movements.map((movement, idx) => (
+                              {workout.movements.filter(m => m.type !== 'header').map((movement, idx) => (
                                 <div key={idx} className="bg-slate-700 px-2 py-1 rounded text-xs">
                                   <span className="text-white font-medium">{movement.name}</span>
                                   {movement.weight && (

@@ -240,7 +240,12 @@
 .border { border-width: 1px; }
 .border-t { border-top-width: 1px; }
 .border-l { border-left-width: 1px; }
+.border-l-4 { border-left-width: 4px; }
 .border-b { border-bottom-width: 1px; }
+
+/* Padding-left utilities */
+.pl-3 { padding-left: 0.75rem; }
+.pl-4 { padding-left: 1rem; }
 
 /* Shadow utilities */
 .shadow-lg { box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); }
