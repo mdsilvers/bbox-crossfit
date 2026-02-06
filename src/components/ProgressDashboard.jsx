@@ -476,7 +476,7 @@ function TopMovements({ workoutResults }) {
     const movementCounts = {};
     (workoutResults || []).forEach(result => {
       result.movements.forEach(movement => {
-        if (movement.name) {
+        if (movement.name && movement.type !== 'header') {
           movementCounts[movement.name] = (movementCounts[movement.name] || 0) + 1;
         }
       });

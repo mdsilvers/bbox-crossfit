@@ -96,55 +96,28 @@ export default function AthleteWorkoutView({
           </div>
 
           <div className="space-y-3 mb-4">
-            {myResult.movements && myResult.movements.length > 0 ? (
-              // Show athlete's logged movements if they exist
-              myResult.movements.map((movement, idx) => (
-                movement.type === 'header' ? (
-                  <div key={idx} className="border-l-4 border-amber-500 pl-4 py-2">
-                    <div className="text-amber-400 text-sm font-semibold uppercase tracking-wider">{movement.name}</div>
+            {(editingWorkout ? editingWorkout.movements : todayWOD?.movements || []).map((movement, idx) => (
+              movement.type === 'header' ? (
+                <div key={idx} className="border-l-4 border-amber-500 pl-4 py-2">
+                  <div className="text-amber-400 text-sm font-semibold uppercase tracking-wider">{movement.name}</div>
+                </div>
+              ) : (
+                <div key={idx} className="bg-slate-700 rounded-lg p-4">
+                  <div className="font-bold text-white text-lg mb-1">{movement.name}</div>
+                  <div className="text-slate-400 mb-3">
+                    {movement.reps}
+                    {movement.notes && <span className="text-sm ml-2">({movement.notes})</span>}
                   </div>
-                ) : (
-                  <div key={idx} className="bg-slate-700 rounded-lg p-4">
-                    <div className="font-bold text-white text-lg mb-1">{movement.name}</div>
-                    <div className="text-slate-400 mb-3">
-                      {movement.reps}
-                      {movement.notes && <span className="text-sm ml-2">({movement.notes})</span>}
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Your weight (e.g., 34kg, scaled, bodyweight)"
-                      value={movement.weight || ''}
-                      onChange={(e) => updateMovementWeight(idx, e.target.value)}
-                      className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
-                    />
-                  </div>
-                )
-              ))
-            ) : (
-              // Fallback to WOD template if no logged movements
-              (editingWorkout ? editingWorkout.movements : todayWOD?.movements || []).map((movement, idx) => (
-                movement.type === 'header' ? (
-                  <div key={idx} className="border-l-4 border-amber-500 pl-4 py-2">
-                    <div className="text-amber-400 text-sm font-semibold uppercase tracking-wider">{movement.name}</div>
-                  </div>
-                ) : (
-                  <div key={idx} className="bg-slate-700 rounded-lg p-4">
-                    <div className="font-bold text-white text-lg mb-1">{movement.name}</div>
-                    <div className="text-slate-400 mb-3">
-                      {movement.reps}
-                      {movement.notes && <span className="text-sm ml-2">({movement.notes})</span>}
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Your weight (e.g., 34kg, scaled, bodyweight)"
-                      value=""
-                      onChange={(e) => updateMovementWeight(idx, e.target.value)}
-                      className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
-                    />
-                  </div>
-                )
-              ))
-            )}
+                  <input
+                    type="text"
+                    placeholder="Your weight (e.g., 34kg, scaled, bodyweight)"
+                    value={myResult.movements[idx]?.weight || ''}
+                    onChange={(e) => updateMovementWeight(idx, e.target.value, editingWorkout?.movements || todayWOD?.movements)}
+                    className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
+                  />
+                </div>
+              )
+            ))}
           </div>
 
           {todayWOD?.photoData && !editingWorkout && (

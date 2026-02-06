@@ -102,7 +102,7 @@ export default function CoachWorkoutView({
                     type="text"
                     placeholder="Your weight (e.g., 34kg, scaled, bodyweight)"
                     value={myResult.movements[idx]?.weight || ''}
-                    onChange={(e) => updateMovementWeight(idx, e.target.value)}
+                    onChange={(e) => updateMovementWeight(idx, e.target.value, editingWorkout?.movements || todayWOD?.movements)}
                     className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
                   />
                 </div>

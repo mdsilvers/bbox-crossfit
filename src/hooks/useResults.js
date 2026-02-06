@@ -326,10 +326,18 @@ export function useResults(currentUser) {
     if (navigate) navigate('dashboard');
   };
 
-  const updateMovementWeight = (index, weight) => {
-    const updated = [...myResult.movements];
-    updated[index].weight = weight;
-    setMyResult({ ...myResult, movements: updated });
+  const updateMovementWeight = (index, weight, templateMovements) => {
+    setMyResult(prev => {
+      let movements = [...prev.movements];
+      // Initialize from template if movements not yet populated
+      if (movements.length === 0 && templateMovements) {
+        movements = templateMovements.map(m => ({ ...m, weight: '' }));
+      }
+      if (movements[index]) {
+        movements[index] = { ...movements[index], weight };
+      }
+      return { ...prev, movements };
+    });
   };
 
   const addCustomMovement = () => {
