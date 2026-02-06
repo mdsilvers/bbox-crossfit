@@ -256,6 +256,8 @@
 
 /* Cursor utilities */
 .cursor-pointer { cursor: pointer; }
+.cursor-grab { cursor: grab; }
+.active\:cursor-grabbing:active { cursor: grabbing; }
 
 /* ============================================
    Base styles

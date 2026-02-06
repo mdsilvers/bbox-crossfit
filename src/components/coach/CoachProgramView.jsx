@@ -1,7 +1,151 @@
 import React from 'react';
-import { Plus, Trash2, Dumbbell, Calendar, Users, Image } from 'lucide-react';
+import { Plus, Trash2, Dumbbell, Calendar, Users, Image, GripVertical } from 'lucide-react';
 import { isBenchmarkWod, getBenchmarkByName, getBenchmarksByCategory } from '../../lib/benchmarks';
 import { STANDARD_MOVEMENTS, getLocalToday } from '../../lib/constants';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+function SortableMovementItem({ id, index, movement, movementInput, showMovementDropdown, filteredMovements, handleMovementInput, selectMovement, updateMovement, removeMovement, setShowMovementDropdown, canRemove }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  if (movement.type === 'header') {
+    return (
+      <div ref={setNodeRef} style={style} className="border-l-4 border-amber-500 bg-slate-700/50 rounded-r-lg p-3 mb-3">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="cursor-grab active:cursor-grabbing text-slate-500 hover:text-slate-300 touch-target flex-shrink-0"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="w-4 h-4" />
+          </button>
+          <span className="text-amber-500 text-xs font-bold uppercase tracking-wider">Section</span>
+          <input
+            type="text"
+            placeholder="e.g., Station 1 (4 min work, 1 min rest)"
+            value={movement.name}
+            onChange={(e) => updateMovement(index, 'name', e.target.value)}
+            className="flex-1 bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-amber-500 focus:outline-none text-sm"
+          />
+          <button
+            onClick={() => removeMovement(index)}
+            className="text-red-400 hover:text-red-300"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="bg-slate-700 rounded-lg p-3 mb-3">
+      <div className="flex items-start gap-2">
+        <button
+          type="button"
+          className="cursor-grab active:cursor-grabbing text-slate-500 hover:text-slate-300 touch-target flex-shrink-0 mt-1"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <div className="flex-1 grid grid-cols-2 gap-2">
+          <div className="col-span-2 relative">
+            <input
+              type="text"
+              placeholder="Type to search movements..."
+              value={movementInput[index] || ''}
+              onChange={(e) => handleMovementInput(index, e.target.value)}
+              onFocus={() => {
+                if (movementInput[index]?.trim()) {
+                  const updatedDropdown = [...showMovementDropdown];
+                  updatedDropdown[index] = true;
+                  setShowMovementDropdown(updatedDropdown);
+                }
+              }}
+              className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none text-sm"
+            />
+            {showMovementDropdown[index] && filteredMovements.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-slate-600 border border-slate-500 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {filteredMovements.slice(0, 10).map((mov, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => selectMovement(index, mov)}
+                    className="px-3 py-2 hover:bg-red-600 cursor-pointer text-white transition-colors text-sm"
+                  >
+                    {mov}
+                  </div>
+                ))}
+                {!STANDARD_MOVEMENTS.includes(movementInput[index]) && movementInput[index]?.trim() && (
+                  <div
+                    onClick={() => {
+                      const updatedDropdown = [...showMovementDropdown];
+                      updatedDropdown[index] = false;
+                      setShowMovementDropdown(updatedDropdown);
+                    }}
+                    className="px-3 py-2 bg-slate-700 hover:bg-slate-600 cursor-pointer text-white border-t border-slate-500 font-semibold transition-colors text-sm"
+                  >
+                    + Add "{movementInput[index]}" as custom
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <input
+            type="text"
+            placeholder="Reps (e.g., 21-15-9)"
+            value={movement.reps}
+            onChange={(e) => updateMovement(index, 'reps', e.target.value)}
+            className="bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none text-sm"
+          />
+          <input
+            type="text"
+            placeholder="Notes (e.g., Rx: 95/65)"
+            value={movement.notes}
+            onChange={(e) => updateMovement(index, 'notes', e.target.value)}
+            className="bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none text-sm"
+          />
+        </div>
+        {canRemove && (
+          <button
+            onClick={() => removeMovement(index)}
+            className="text-red-400 hover:text-red-300 mt-1"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function CoachProgramView({
   currentUser,
@@ -32,6 +176,7 @@ export default function CoachProgramView({
   handleMovementInput,
   selectMovement,
   removeMovement,
+  reorderMovement,
   wodPhotoData,
   setWodPhotoData,
   handleWodPhotoUpload,
@@ -39,6 +184,29 @@ export default function CoachProgramView({
   selectedCoach,
   setSelectedCoach,
 }) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(KeyboardSensor)
+  );
+
+  const handleDragStart = () => {
+    // Close all open autocomplete dropdowns when drag starts
+    setShowMovementDropdown(showMovementDropdown.map(() => false));
+  };
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = parseInt(active.id.replace('movement-', ''), 10);
+    const newIndex = parseInt(over.id.replace('movement-', ''), 10);
+    reorderMovement(oldIndex, newIndex);
+  };
+
+  const sortableIds = newWOD.movements.map((_, i) => `movement-${i}`);
+
   return (
     <>
       {!showWODForm ? (
@@ -414,98 +582,32 @@ export default function CoachProgramView({
               </div>
             </div>
 
-            {newWOD.movements.map((movement, index) => (
-              movement.type === 'header' ? (
-                <div key={index} className="border-l-4 border-amber-500 bg-slate-700/50 rounded-r-lg p-3 mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-amber-500 text-xs font-bold uppercase tracking-wider">Section</span>
-                    <input
-                      type="text"
-                      placeholder="e.g., Station 1 (4 min work, 1 min rest)"
-                      value={movement.name}
-                      onChange={(e) => updateMovement(index, 'name', e.target.value)}
-                      className="flex-1 bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-amber-500 focus:outline-none text-sm"
-                    />
-                    <button
-                      onClick={() => removeMovement(index)}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-              <div key={index} className="bg-slate-700 rounded-lg p-3 mb-3">
-                <div className="flex items-start gap-2">
-                  <div className="flex-1 grid grid-cols-2 gap-2">
-                    <div className="col-span-2 relative">
-                      <input
-                        type="text"
-                        placeholder="Type to search movements..."
-                        value={movementInput[index] || ''}
-                        onChange={(e) => handleMovementInput(index, e.target.value)}
-                        onFocus={() => {
-                          if (movementInput[index]?.trim()) {
-                            const updatedDropdown = [...showMovementDropdown];
-                            updatedDropdown[index] = true;
-                            setShowMovementDropdown(updatedDropdown);
-                          }
-                        }}
-                        className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none text-sm"
-                      />
-                      {showMovementDropdown[index] && filteredMovements.length > 0 && (
-                        <div className="absolute z-10 w-full mt-1 bg-slate-600 border border-slate-500 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                          {filteredMovements.slice(0, 10).map((mov, idx) => (
-                            <div
-                              key={idx}
-                              onClick={() => selectMovement(index, mov)}
-                              className="px-3 py-2 hover:bg-red-600 cursor-pointer text-white transition-colors text-sm"
-                            >
-                              {mov}
-                            </div>
-                          ))}
-                          {!STANDARD_MOVEMENTS.includes(movementInput[index]) && movementInput[index]?.trim() && (
-                            <div
-                              onClick={() => {
-                                const updatedDropdown = [...showMovementDropdown];
-                                updatedDropdown[index] = false;
-                                setShowMovementDropdown(updatedDropdown);
-                              }}
-                              className="px-3 py-2 bg-slate-700 hover:bg-slate-600 cursor-pointer text-white border-t border-slate-500 font-semibold transition-colors text-sm"
-                            >
-                              + Add "{movementInput[index]}" as custom
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Reps (e.g., 21-15-9)"
-                      value={movement.reps}
-                      onChange={(e) => updateMovement(index, 'reps', e.target.value)}
-                      className="bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Notes (e.g., Rx: 95/65)"
-                      value={movement.notes}
-                      onChange={(e) => updateMovement(index, 'notes', e.target.value)}
-                      className="bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none text-sm"
-                    />
-                  </div>
-                  {newWOD.movements.length > 1 && (
-                    <button
-                      onClick={() => removeMovement(index)}
-                      className="text-red-400 hover:text-red-300 mt-1"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-              )
-            ))}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+                {newWOD.movements.map((movement, index) => (
+                  <SortableMovementItem
+                    key={`movement-${index}`}
+                    id={`movement-${index}`}
+                    index={index}
+                    movement={movement}
+                    movementInput={movementInput}
+                    showMovementDropdown={showMovementDropdown}
+                    filteredMovements={filteredMovements}
+                    handleMovementInput={handleMovementInput}
+                    selectMovement={selectMovement}
+                    updateMovement={updateMovement}
+                    removeMovement={removeMovement}
+                    setShowMovementDropdown={setShowMovementDropdown}
+                    canRemove={newWOD.movements.length > 1}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           </div>
 
           <div className="mb-4">

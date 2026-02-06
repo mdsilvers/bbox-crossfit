@@ -280,6 +280,19 @@ export function useWorkouts(currentUser) {
     setShowMovementDropdown(updatedDropdown);
   };
 
+  const reorderMovement = (fromIndex, toIndex) => {
+    const reorder = (arr) => {
+      const result = [...arr];
+      const [removed] = result.splice(fromIndex, 1);
+      result.splice(toIndex, 0, removed);
+      return result;
+    };
+
+    setNewWOD({ ...newWOD, movements: reorder(newWOD.movements) });
+    setMovementInput(reorder(movementInput));
+    setShowMovementDropdown(reorder(showMovementDropdown));
+  };
+
   return {
     allWODs, setAllWODs,
     todayWOD, setTodayWOD,
@@ -308,5 +321,6 @@ export function useWorkouts(currentUser) {
     handleMovementInput,
     selectMovement,
     removeMovement,
+    reorderMovement,
   };
 }

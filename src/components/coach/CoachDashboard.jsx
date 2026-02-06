@@ -59,6 +59,7 @@ export default function CoachDashboard() {
     handleMovementInput,
     selectMovement,
     removeMovement,
+    reorderMovement,
   } = workouts;
 
   const {
@@ -321,6 +322,7 @@ export default function CoachDashboard() {
               handleMovementInput={handleMovementInput}
               selectMovement={selectMovement}
               removeMovement={removeMovement}
+              reorderMovement={reorderMovement}
               wodPhotoData={wodPhotoData}
               setWodPhotoData={setWodPhotoData}
               handleWodPhotoUpload={handleWodPhotoUpload}
