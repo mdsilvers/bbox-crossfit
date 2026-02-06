@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BBOX CrossFit - Getting Started</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #0f1117;
+    color: #e2e8f0;
+    line-height: 1.6;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    background: linear-gradient(135deg, #1a1025 0%, #0f1117 50%, #111827 100%);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    text-align: center;
+    padding: 60px 24px 48px;
+  }
+  .hero img {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 16px;
+    border-radius: 16px;
+  }
+  .hero h1 {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 4px;
+  }
+  .hero .subtitle {
+    color: #94a3b8;
+    font-size: 1.05rem;
+    font-weight: 400;
+  }
+  .hero .tagline {
+    margin-top: 20px;
+    font-size: 0.95rem;
+    color: #64748b;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ── Container ── */
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── Section ── */
+  .section {
+    padding: 48px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .section:last-child { border-bottom: none; }
+
+  .section-label {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #e57373;
+    background: rgba(229,115,115,0.1);
+    padding: 4px 10px;
+    border-radius: 4px;
+    margin-bottom: 12px;
+  }
+
+  .section h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+  }
+
+  .section .lead {
+    color: #94a3b8;
+    font-size: 0.95rem;
+    margin-bottom: 32px;
+    max-width: 600px;
+  }
+
+  /* ── Steps ── */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background: rgba(229,115,115,0.15);
+    color: #e57373;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .step-content h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .step-content p {
+    color: #94a3b8;
+    font-size: 0.9rem;
+  }
+
+  /* ── Feature Grid ── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 600px) {
+    .feature-grid { grid-template-columns: 1fr; }
+  }
+  .feature-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .feature-card .icon {
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+  }
+  .feature-card h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .feature-card p {
+    color: #94a3b8;
+    font-size: 0.85rem;
+  }
+
+  /* ── Screenshot ── */
+  .screenshot-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 28px;
+  }
+  @media (max-width: 600px) {
+    .screenshot-row { grid-template-columns: 1fr; }
+  }
+  .screenshot-row.triple {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  @media (max-width: 700px) {
+    .screenshot-row.triple { grid-template-columns: 1fr; }
+  }
+  .screenshot-block {
+    text-align: center;
+  }
+  .screenshot-block .frame {
+    background: #1a1d27;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    overflow: hidden;
+    aspect-ratio: 9/16;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .screenshot-block .frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .screenshot-block .frame .placeholder {
+    color: #475569;
+    font-size: 0.8rem;
+    padding: 20px;
+  }
+  .screenshot-block .caption {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  /* ── Role Tabs ── */
+  .role-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .role-tab {
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: default;
+  }
+  .role-tab.coach {
+    background: rgba(229,115,115,0.15);
+    color: #e57373;
+    border: 1px solid rgba(229,115,115,0.25);
+  }
+  .role-tab.athlete {
+    background: rgba(96,165,250,0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(96,165,250,0.25);
+  }
+
+  /* ── Workflow list ── */
+  .workflow {
+    margin-bottom: 28px;
+  }
+  .workflow h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .workflow ul {
+    list-style: none;
+    padding: 0;
+  }
+  .workflow ul li {
+    position: relative;
+    padding: 6px 0 6px 24px;
+    color: #94a3b8;
+    font-size: 0.9rem;
+  }
+  .workflow ul li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 14px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+  }
+
+  /* ── Badge samples ── */
+  .badge-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+  }
+  .badge.red { background: rgba(239,68,68,0.2); color: #f87171; }
+  .badge.green { background: rgba(34,197,94,0.2); color: #4ade80; }
+  .badge.yellow { background: rgba(234,179,8,0.2); color: #facc15; }
+  .badge.violet { background: rgba(167,139,250,0.2); color: #a78bfa; }
+  .badge.blue { background: rgba(96,165,250,0.2); color: #60a5fa; }
+  .badge.orange { background: rgba(251,146,60,0.2); color: #fb923c; }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px;
+    background: rgba(255,255,255,0.06);
+    margin: 32px 0;
+  }
+
+  /* ── Nav bar illustration ── */
+  .nav-bar-demo {
+    display: flex;
+    justify-content: space-around;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 14px 8px;
+    margin-top: 20px;
+    max-width: 450px;
+  }
+  .nav-item {
+    text-align: center;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: #475569;
+  }
+  .nav-item.active { color: #e57373; }
+  .nav-item .nav-icon {
+    font-size: 1.1rem;
+    margin-bottom: 2px;
+  }
+
+  /* ── Footer ── */
+  .footer {
+    text-align: center;
+    padding: 40px 24px;
+    color: #475569;
+    font-size: 0.8rem;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+
+  /* ── Tip callout ── */
+  .tip {
+    background: rgba(96,165,250,0.08);
+    border-left: 3px solid #60a5fa;
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin-top: 16px;
+    font-size: 0.85rem;
+    color: #94a3b8;
+  }
+  .tip strong { color: #60a5fa; }
+
+  /* ── Lightbox ── */
+  .screenshot-block .frame { cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+  .screenshot-block .frame:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(229,115,115,0.2); }
+  .lightbox-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0,0,0,0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    cursor: zoom-out;
+  }
+  .lightbox-overlay.active { display: flex; }
+  .lightbox-overlay img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 12px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    object-fit: contain;
+  }
+  .lightbox-close {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    z-index: 10000;
+    color: #fff;
+    font-size: 2rem;
+    font-weight: 300;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+    line-height: 1;
+  }
+  .lightbox-close:hover { opacity: 1; }
+  .lightbox-caption {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #94a3b8;
+    font-size: 0.85rem;
+    font-weight: 500;
+    background: rgba(15,17,23,0.8);
+    padding: 6px 16px;
+    border-radius: 8px;
+  }
+
+  /* ── Add to Home Screen Cards ── */
+  .platform-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    margin-top: 32px;
+  }
+  .platform-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 16px;
+    padding: 28px;
+  }
+  .platform-card.iphone {
+    border-color: rgba(0,122,255,0.3);
+    background: linear-gradient(135deg, rgba(0,122,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  }
+  .platform-card.android {
+    border-color: rgba(52,168,83,0.3);
+    background: linear-gradient(135deg, rgba(52,168,83,0.05) 0%, rgba(255,255,255,0.02) 100%);
+  }
+  .platform-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .platform-header .platform-icon {
+    font-size: 2rem;
+  }
+  .platform-header h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+  .platform-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .platform-step {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .platform-step-num {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+  }
+  .iphone .platform-step-num {
+    background: #007AFF;
+    color: white;
+  }
+  .android .platform-step-num {
+    background: #34A853;
+    color: white;
+  }
+  .platform-step-content h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+  .platform-step-content p {
+    color: #94a3b8;
+    font-size: 0.85rem;
+  }
+  .platform-step-content .icon-demo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 1.1rem;
+  }
+  .platform-tip {
+    margin-top: 20px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    color: #94a3b8;
+  }
+  .iphone .platform-tip {
+    background: rgba(0,122,255,0.08);
+    border-left: 3px solid #007AFF;
+  }
+  .android .platform-tip {
+    background: rgba(52,168,83,0.08);
+    border-left: 3px solid #34A853;
+  }
+  .platform-tip strong {
+    color: #60a5fa;
+  }
+  .android .platform-tip strong {
+    color: #4ade80;
+  }
+  .success-banner {
+    text-align: center;
+    margin-top: 32px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(229,115,115,0.1) 0%, rgba(96,165,250,0.1) 100%);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+  }
+  .success-banner p {
+    font-size: 1rem;
+    color: #e2e8f0;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HERO ═══════════ -->
+<div class="hero">
+  <img src="https://spcdn.shortpixel.ai/spio/ret_img,q_cdnize,to_auto,s_webp:avif/www.antarescatamarans.com/wp-content/uploads/2026/01/BBOX-New-BarBell-smallest.png" alt="BBOX Logo">
+  <h1>BBOX CrossFit</h1>
+  <p class="subtitle">Workout Logger</p>
+  <p class="tagline">Your box's all-in-one platform for programming WODs, tracking results, and staying connected with your athletes.</p>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════ ADD TO HOME SCREEN (NOW FIRST!) ═══════════ -->
+  <div class="section">
+    <span class="section-label">Install</span>
+    <h2>📱 Add to Home Screen</h2>
+    <p class="lead">Install BBOX as an app on your phone for quick one-tap access &mdash; no app store needed.</p>
+
+    <div class="platform-cards">
+      
+      <!-- iPhone Instructions -->
+      <div class="platform-card iphone">
+        <div class="platform-header">
+          <span class="platform-icon"></span>
+          <h3>iPhone / iPad</h3>
+        </div>
+        
+        <div class="platform-steps">
+          <div class="platform-step">
+            <div class="platform-step-num">1</div>
+            <div class="platform-step-content">
+              <h4>Open in Safari</h4>
+              <p>Go to <strong>bbox-crossfit.vercel.app</strong> in Safari (not Chrome)</p>
+            </div>
+          </div>
+          
+          <div class="platform-step">
+            <div class="platform-step-num">2</div>
+            <div class="platform-step-content">
+              <h4>Tap the Share button</h4>
+              <p>Look for the <span class="icon-demo">⬆</span> icon at the bottom of Safari</p>
+            </div>
+          </div>
+          
+          <div class="platform-step">
+            <div class="platform-step-num">3</div>
+            <div class="platform-step-content">
+              <h4>Scroll &amp; tap "Add to Home Screen"</h4>
+              <p>Look for the <span class="icon-demo">➕</span> Add to Home Screen option</p>
+            </div>
+          </div>
+          
+          <div class="platform-step">
+            <div class="platform-step-num">4</div>
+            <div class="platform-step-content">
+              <h4>Tap "Add"</h4>
+              <p>The BBOX icon appears on your home screen!</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="platform-tip">
+          <strong>💡 Tip:</strong> Must use Safari &mdash; this option doesn&rsquo;t appear in Chrome or other browsers on iPhone.
+        </div>
+      </div>
+      
+      <!-- Android Instructions -->
+      <div class="platform-card android">
+        <div class="platform-header">
+          <span class="platform-icon">🤖</span>
+          <h3>Android</h3>
+        </div>
+        
+        <div class="platform-steps">
+          <div class="platform-step">
+            <div class="platform-step-num">1</div>
+            <div class="platform-step-content">
+              <h4>Open in Chrome</h4>
+              <p>Go to <strong>bbox-crossfit.vercel.app</strong> in Chrome</p>
+            </div>
+          </div>
+          
+          <div class="platform-step">
+            <div class="platform-step-num">2</div>
+            <div class="platform-step-content">
+              <h4>Tap the three-dot menu</h4>
+              <p>Look for <span class="icon-demo">⋮</span> in the top-right corner</p>
+            </div>
+          </div>
+          
+          <div class="platform-step">
+            <div class="platform-step-num">3</div>
+            <div class="platform-step-content">
+              <h4>Tap "Add to Home screen"</h4>
+              <p>Or tap "Install app" if you see that option</p>
+            </div>
+          </div>
+          
+          <div class="platform-step">
+            <div class="platform-step-num">4</div>
+            <div class="platform-step-content">
+              <h4>Tap "Add"</h4>
+              <p>The BBOX icon appears on your home screen!</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="platform-tip">
+          <strong>💡 Tip:</strong> Chrome may show an "Install" banner automatically at the bottom &mdash; just tap it!
+        </div>
+      </div>
+      
+    </div>
+
+    <div class="success-banner">
+      <p>🎉 <strong>Done!</strong> Now continue below to create your account.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════ GETTING STARTED ═══════════ -->
+  <div class="section">
+    <span class="section-label">Getting Started</span>
+    <h2>Create Your Account</h2>
+    <p class="lead">Get up and running in three quick steps.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Sign Up</h3>
+          <p>Tap <strong>Sign Up</strong> on the login screen. Enter your name, email, and password. Select your role &mdash; <strong>Coach</strong> or <strong>Athlete</strong> &mdash; and your group (Combined, Men&rsquo;s, or Women&rsquo;s).</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Confirm Your Email</h3>
+          <p>Check your inbox for a confirmation link and click it to activate your account.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Log In</h3>
+          <p>Return to the app and sign in. You&rsquo;ll land on your personalized dashboard.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="screenshot-row">
+      <div class="screenshot-block">
+        <div class="frame"><img src="https://spcdn.shortpixel.ai/spio/ret_img,q_cdnize,to_auto,s_webp:avif/www.antarescatamarans.com/wp-content/uploads/2026/02/bbox-login-screen-png.png" alt="Login" loading="lazy"></div>
+        <div class="caption">Login Screen</div>
+      </div>
+      <div class="screenshot-block">
+        <div class="frame"><img src="https://spcdn.shortpixel.ai/spio/ret_img,q_cdnize,to_auto,s_webp:avif/www.antarescatamarans.com/wp-content/uploads/2026/02/bbox-signup-screen-png.png" alt="Signup" loading="lazy"></div>
+        <div class="caption">Sign Up Screen</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ APP NAVIGATION ═══════════ -->
+  <div class="section">
+    <span class="section-label">Navigation</span>
+    <h2>Finding Your Way Around</h2>
+    <p class="lead">The bottom navigation bar gives you quick access to every section of the app.</p>
+
+    <div class="nav-bar-demo">
+      <div class="nav-item active">
+        <div class="nav-icon">&#8962;</div>
+        Home
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#9201;</div>
+        History
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#10138;</div>
+        Progress
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#128197;</div>
+        Program
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon">&#128101;</div>
+        Athletes
+      </div>
+    </div>
+
+    <div class="tip"><strong>Tip:</strong> Coaches see all five tabs. Athletes see Home, History, and Progress.</div>
+  </div>
+
+  <!-- ═══════════ COACH FEATURES ═══════════ -->
+  <div class="section">
+    <div class="role-tabs">
+      <div class="role-tab coach">Coach</div>
+    </div>
+    <h2>Coach Features</h2>
+    <p class="lead">Program workouts, track your athletes, and manage your box from one place.</p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">&#128221;</div>
+        <h3>Post WODs</h3>
+        <p>Create daily workouts with name, type, group, and movements. Choose from 46 benchmark templates for quick setup.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#128197;</div>
+        <h3>Program Tab</h3>
+        <p>View your full programming calendar. Edit or delete any posted WOD. See how many athletes completed each one.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#128101;</div>
+        <h3>Athletes Tab</h3>
+        <p>See every athlete at a glance &mdash; total workouts, weekly count, and when they last trained.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#127942;</div>
+        <h3>Benchmarks</h3>
+        <p>46 standard CrossFit benchmarks (Girl WODs, Strength, Cardio) with auto-fill templates.</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="workflow">
+      <h3>&#9654; Posting a WOD</h3>
+      <ul>
+        <li>Go to <strong>Home</strong> and tap <strong>Post Today&rsquo;s WOD</strong>, or use <strong>+ New WOD</strong> on the Program tab</li>
+        <li>Optionally select a <strong>Benchmark Template</strong> to auto-fill name, type, and movements</li>
+        <li>Set the date, workout type (For Time, AMRAP, etc.), and group (Combined, Men&rsquo;s, Women&rsquo;s)</li>
+        <li>Add movements with reps and notes (e.g., &ldquo;Rx: 95/65&rdquo;)</li>
+        <li>Tap <strong>Post WOD</strong> &mdash; athletes will see it on their dashboard</li>
+      </ul>
+    </div>
+
+    <div class="screenshot-row triple">
+      <div class="screenshot-block">
+        <div class="frame"><img src="https://spcdn.shortpixel.ai/spio/ret_img,q_cdnize,to_auto,s_webp:avif/www.antarescatamarans.com/wp-content/uploads/2026/02/bbox-coach-dashboard-png.png" alt="Coach Home" loading="lazy"></div>
+        <div class="caption">Coach Dashboard</div>
+      </div>
+      <div class="screenshot-block">
+        <div class="frame"><img src="https://spcdn.shortpixel.ai/spio/ret_img,q_cdnize,to_auto,s_webp:avif/www.antarescatamarans.com/wp-content/uploads/2026/02/bbox-post-new-wod-png.png" alt="Post Wod" loading="lazy"></div>
+        <div class="caption">Post New WOD</div>
+      </div>
+      <div class="screenshot-block">
+        <div class="frame"><img src="https://spcdn.shortpixel.ai/spio/ret_img,q_cdnize,to_auto,s_webp:avif/www.antarescatamarans.com/wp-content/uploads/2026/02/bbox-athletes-png.png" alt="Athletes" loading="lazy"></div>
+        <div class="caption">Athletes Overview</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ ATHLETE FEATURES ═══════════ -->
+  <div class="section">
+    <div class="role-tabs">
+      <div class="role-tab athlete">Athlete</div>
+    </div>
+    <h2>Athlete Features</h2>
+    <p class="lead">Log your workouts, track your progress, and see how you stack up.</p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">&#128170;</div>
+        <h3>Log Workouts</h3>
+        <p>Record your time, weights, workout mode (RX or Scaled), add a photo, and write notes.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#128200;</div>
+        <h3>Track Progress</h3>
+        <p>See weekly stats, streaks, PR trend charts, box rankings, and a GitHub-style activity heatmap.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#127941;</div>
+        <h3>Personal Records</h3>
+        <p>PRs are automatically tracked for benchmark WODs. Your best times and weights surface on your dashboard.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#128247;</div>
+        <h3>Custom Workouts</h3>
+        <p>Traveling or doing your own thing? Log a custom workout any time &mdash; it shows up in your history with a distinct badge.</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="workflow">
+      <h3>&#9654; Logging a Workout</h3>
+      <ul>
+        <li>Open <strong>Home</strong> &mdash; today&rsquo;s WOD appears at the top with the full movement list</li>
+        <li>Tap <strong>Log Workout</strong> to open the logging form</li>
+        <li>Enter your weights for each movement, select <strong>RX</strong> or <strong>Scaled</strong></li>
+        <li>Add your completion time, an optional photo, and any notes</li>
+        <li>Tap <strong>Save</strong> &mdash; your result appears in History and the Activity Feed</li>
+      </ul>
+    </div>
+
+    <div class="workflow">
+      <h3>&#9654; Missed a Day?</h3>
+      <ul>
+        <li>Scroll down on <strong>Home</strong> to the <strong>Missed Workouts</strong> section</li>
+        <li>Past 7 days of unlogged WODs appear here with a <strong>+ Log</strong> button</li>
+        <li>Tap to log your result retroactively</li>
+      </ul>
+    </div>
+
+    <div class="screenshot-row triple">
+      <div class="screenshot-block">
+        <div class="frame"><img src="https://spcdn.shortpixel.ai/spio/ret_img,q_cdnize,to_auto,s_webp:avif/www.antarescatamarans.com/wp-content/uploads/2026/02/bbox-log-workout-png.png" alt="Log Workout" loading="lazy"></div>
+        <div class="caption">Log Workout</div>
+      </div>
+      <div class="screenshot-block">
+        <div class="frame"><img src="https://spcdn.shortpixel.ai/spio/ret_img,q_cdnize,to_auto,s_webp:avif/www.antarescatamarans.com/wp-content/uploads/2026/02/bbox-progress-and-stats-png.png" alt="Progress" loading="lazy"></div>
+        <div class="caption">Progress &amp; Stats</div>
+      </div>
+      <div class="screenshot-block">
+        <div class="frame"><img src="https://spcdn.shortpixel.ai/spio/ret_img,q_cdnize,to_auto,s_webp:avif/www.antarescatamarans.com/wp-content/uploads/2026/02/bbox-workout-history-png.png" alt="History" loading="lazy"></div>
+        <div class="caption">Workout History</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SOCIAL ═══════════ -->
+  <div class="section">
+    <span class="section-label">Community</span>
+    <h2>Activity Feed &amp; Social</h2>
+    <p class="lead">See what your gym is up to and celebrate each other&rsquo;s wins.</p>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">&#128240;</div>
+        <h3>Activity Feed</h3>
+        <p>A live feed of all workouts logged, badges earned, and milestones hit across the box. Filter by All, Mine, or Badges.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">&#128293;</div>
+        <h3>Reactions</h3>
+        <p>Give your teammates a fist bump, fire, or trophy on their logged workouts.</p>
+      </div>
+    </div>
+
+    <div class="screenshot-row">
+      <div class="screenshot-block">
+        <div class="frame"><img src="https://spcdn.shortpixel.ai/spio/ret_img,q_cdnize,to_auto,s_webp:avif/www.antarescatamarans.com/wp-content/uploads/2026/02/bbox-activity-feed-png.png" alt="Activity Feed" loading="lazy"></div>
+        <div class="caption">Activity Feed</div>
+      </div>
+      <div class="screenshot-block">
+        <div class="frame"><img src="https://spcdn.shortpixel.ai/spio/ret_img,q_cdnize,to_auto,s_webp:avif/www.antarescatamarans.com/wp-content/uploads/2026/02/bbox-activity-feed-reactions.png" alt="Reactions" loading="lazy"></div>
+        <div class="caption">Reactions &amp; Badges</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ BADGES & TYPES ═══════════ -->
+  <div class="section">
+    <span class="section-label">Reference</span>
+    <h2>Badges &amp; Workout Types</h2>
+    <p class="lead">Color-coded badges help you quickly identify workout details at a glance.</p>
+
+    <h3 style="font-size:0.95rem; margin-bottom:12px;">Workout Type Badges</h3>
+    <div class="badge-row">
+      <span class="badge red">For Time</span>
+      <span class="badge orange">AMRAP</span>
+      <span class="badge blue">Strength</span>
+      <span class="badge green">EMOM</span>
+      <span class="badge violet">Chipper</span>
+    </div>
+
+    <h3 style="font-size:0.95rem; margin-top:24px; margin-bottom:12px;">Source Badges</h3>
+    <div class="badge-row">
+      <span class="badge yellow">Benchmark</span>
+      <span class="badge violet">Custom</span>
+    </div>
+
+    <h3 style="font-size:0.95rem; margin-top:24px; margin-bottom:12px;">Group Badges</h3>
+    <div class="badge-row">
+      <span class="badge blue">Combined</span>
+      <span class="badge green">Mens</span>
+      <span class="badge violet">Womens</span>
+    </div>
+  </div>
+
+  <!-- ═══════════ QUICK TIPS ═══════════ -->
+  <div class="section">
+    <span class="section-label">Tips</span>
+    <h2>Quick Tips</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">&#9733;</div>
+        <div class="step-content">
+          <h3>One Result Per Day</h3>
+          <p>You can log one workout per day. Logging again on the same day updates your existing entry.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">&#9733;</div>
+        <div class="step-content">
+          <h3>Edit or Delete Anytime</h3>
+          <p>Made a mistake? Find the workout in your <strong>History</strong> tab and tap <strong>Edit</strong> or <strong>Delete</strong>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">&#9733;</div>
+        <div class="step-content">
+          <h3>PRs Are Automatic</h3>
+          <p>When a coach posts a benchmark WOD and you log a result, your best time is automatically tracked as a PR.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">&#9733;</div>
+        <div class="step-content">
+          <h3>Forgot Your Password?</h3>
+          <p>Tap <strong>Forgot password?</strong> on the login screen. A reset link will be sent to your email.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<div class="footer">
+  BBOX CrossFit &bull; Workout Logger<br>
+  Questions? Talk to your coach or email your box admin.
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox-overlay" id="lightbox" onclick="closeLightbox()">
+  <span class="lightbox-close" onclick="closeLightbox()">&times;</span>
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<script>
+document.querySelectorAll('.screenshot-block .frame').forEach(function(frame) {
+  frame.addEventListener('click', function() {
+    var img = frame.querySelector('img');
+    if (!img) return;
+    var caption = frame.parentElement.querySelector('.caption');
+    document.getElementById('lightbox-img').src = img.src;
+    document.getElementById('lightbox-img').alt = img.alt;
+    document.getElementById('lightbox-caption').textContent = caption ? caption.textContent : '';
+    document.getElementById('lightbox').classList.add('active');
+    document.body.style.overflow = 'hidden';
+  });
+});
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeLightbox();
+});
+</script>
+</body>
+</html>
