@@ -4,9 +4,17 @@ import BBoxLogo from '../shared/BBoxLogo';
 import ForgotPassword from './ForgotPassword';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
+import ResetPasswordForm from './ResetPasswordForm';
 
 export default function AuthScreen() {
-  const { showForgotPassword, showSignup } = useAuth();
+  const { showForgotPassword, showResetPassword, showSignup } = useAuth();
+
+  const renderForm = () => {
+    if (showResetPassword) return <ResetPasswordForm />;
+    if (showForgotPassword) return <ForgotPassword />;
+    if (showSignup) return <SignupForm />;
+    return <LoginForm />;
+  };
 
   return (
     <div className="min-h-screen min-h-dvh bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-5 py-8 sm:px-6 md:px-8">
@@ -17,13 +25,7 @@ export default function AuthScreen() {
           <p className="text-slate-400 text-base">Workout Logger</p>
         </div>
 
-        {showForgotPassword ? (
-          <ForgotPassword />
-        ) : !showSignup ? (
-          <LoginForm />
-        ) : (
-          <SignupForm />
-        )}
+        {renderForm()}
       </div>
     </div>
   );

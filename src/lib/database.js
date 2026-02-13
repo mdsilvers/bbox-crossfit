@@ -49,6 +49,11 @@ export async function resetPassword(email) {
   if (error) throw error;
 }
 
+export async function updatePassword(newPassword) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw error;
+}
+
 export async function getCurrentSession() {
   const { data: { session }, error } = await supabase.auth.getSession();
   if (error) throw error;
