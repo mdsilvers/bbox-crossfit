@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { supabase, clearSupabaseStorage } from '../lib/supabase';
 import * as db from '../lib/database';
 
@@ -32,9 +32,18 @@ export function AuthProvider({ children }) {
   const [authSuccess, setAuthSuccess] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
+  // Track password recovery flow via ref (survives across async callbacks)
+  const isRecoveryFlow = useRef(false);
+
   // Initialize auth state listener
   useEffect(() => {
     let mounted = true;
+
+    // Detect recovery flow from URL hash before anything else runs
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    if (hashParams.get('type') === 'recovery') {
+      isRecoveryFlow.current = true;
+    }
 
     // Helper to load profile with timeout
     const loadProfile = async (userId) => {
@@ -45,8 +54,9 @@ export function AuthProvider({ children }) {
       return db.profileToUser(profile);
     };
 
-    // Check for existing session
+    // Check for existing session (skip during password recovery to preserve the session)
     const initAuth = async () => {
+      if (isRecoveryFlow.current) return;
       try {
         const session = await db.getCurrentSession();
         if (session?.user && mounted) {
@@ -64,9 +74,13 @@ export function AuthProvider({ children }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
+        isRecoveryFlow.current = true;
         if (mounted) setShowResetPassword(true);
         return;
       }
+      // During password recovery, don't load profile or set currentUser
+      // (keeps AuthScreen visible so user can enter new password)
+      if (isRecoveryFlow.current) return;
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
         try {
           const user = await loadProfile(session.user.id);
@@ -208,9 +222,12 @@ export function AuthProvider({ children }) {
 
     try {
       await db.updatePassword(newPassword);
+      isRecoveryFlow.current = false;
       setShowResetPassword(false);
       setNewPassword('');
       setConfirmNewPassword('');
+      // Sign out so user logs in fresh with new password
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
       setAuthSuccess('Password updated successfully! You can now log in with your new password.');
     } catch (error) {
       console.error('Password update error:', error);
