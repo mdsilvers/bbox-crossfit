@@ -24,6 +24,9 @@ export function AuthProvider({ children }) {
   const [signupGroup, setSignupGroup] = useState('mens');
   const [showSignup, setShowSignup] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
@@ -60,6 +63,10 @@ export function AuthProvider({ children }) {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        if (mounted) setShowResetPassword(true);
+        return;
+      }
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
         try {
           const user = await loadProfile(session.user.id);
@@ -178,6 +185,41 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const handleUpdatePassword = async () => {
+    setAuthError('');
+    setAuthSuccess('');
+
+    if (!newPassword || !confirmNewPassword) {
+      setAuthError('Please fill in both password fields');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setAuthError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setAuthError('Passwords do not match');
+      return;
+    }
+
+    setAuthLoading(true);
+
+    try {
+      await db.updatePassword(newPassword);
+      setShowResetPassword(false);
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setAuthSuccess('Password updated successfully! You can now log in with your new password.');
+    } catch (error) {
+      console.error('Password update error:', error);
+      setAuthError(error.message || 'Error updating password. Please try again.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
   const handleForgotPassword = async () => {
     setAuthError('');
     setAuthSuccess('');
@@ -219,6 +261,9 @@ export function AuthProvider({ children }) {
     signupGroup, setSignupGroup,
     showSignup, setShowSignup,
     showForgotPassword, setShowForgotPassword,
+    showResetPassword, setShowResetPassword,
+    newPassword, setNewPassword,
+    confirmNewPassword, setConfirmNewPassword,
     resetEmail, setResetEmail,
     authError, setAuthError,
     authSuccess, setAuthSuccess,
@@ -227,6 +272,7 @@ export function AuthProvider({ children }) {
     handleLogin,
     handleLogout,
     handleForgotPassword,
+    handleUpdatePassword,
   };
 
   return (
