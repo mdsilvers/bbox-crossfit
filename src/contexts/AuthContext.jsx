@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { supabase, clearSupabaseStorage } from '../lib/supabase';
+import { supabase, clearSupabaseStorage, isPasswordRecoveryRedirect } from '../lib/supabase';
 import * as db from '../lib/database';
 
 const AuthContext = createContext(null);
@@ -24,7 +24,7 @@ export function AuthProvider({ children }) {
   const [signupGroup, setSignupGroup] = useState('mens');
   const [showSignup, setShowSignup] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
-  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(isPasswordRecoveryRedirect);
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [resetEmail, setResetEmail] = useState('');
@@ -33,17 +33,11 @@ export function AuthProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(false);
 
   // Track password recovery flow via ref (survives across async callbacks)
-  const isRecoveryFlow = useRef(false);
+  const isRecoveryFlow = useRef(isPasswordRecoveryRedirect);
 
   // Initialize auth state listener
   useEffect(() => {
     let mounted = true;
-
-    // Detect recovery flow from URL hash before anything else runs
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    if (hashParams.get('type') === 'recovery') {
-      isRecoveryFlow.current = true;
-    }
 
     // Helper to load profile with timeout
     const loadProfile = async (userId) => {

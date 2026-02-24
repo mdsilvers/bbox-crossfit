@@ -1,5 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Capture recovery state from URL hash BEFORE Supabase processes and clears it
+const hashParams = new URLSearchParams(window.location.hash.substring(1));
+export const isPasswordRecoveryRedirect = hashParams.get('type') === 'recovery';
+
 const supabaseUrl = (import.meta.env.VITE_SUPABASE_URL || '').replace(/\s/g, '');
 const supabaseAnonKey = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').replace(/\s/g, '');
 
