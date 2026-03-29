@@ -20,6 +20,10 @@ export async function cleanup() {
     password: process.env.TEST_COACH_PASSWORD || 'TestCoach123!',
   });
 
+  // Delete strength program data (coach-owned, FK order: sessions before programs)
+  await supabase.from('program_sessions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await supabase.from('strength_programs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
   // Delete in dependency order: comments/reactions → results → wods
   const { data: results } = await supabase.from('results').select('id');
   if (results?.length) {
@@ -45,6 +49,7 @@ export async function cleanup() {
     password: process.env.TEST_ATHLETE_PASSWORD || 'TestAthlete123!',
   });
 
+  await supabase.from('athlete_enrollments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('results').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await supabase.from('user_badges').delete().neq('id', '00000000-0000-0000-0000-000000000000');
 
