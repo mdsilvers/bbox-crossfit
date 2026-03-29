@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Trash2, Calendar, Image, UserCircle } from 'lucide-react';
 import ScoreInput from '../ScoreInput';
 import RxToggle from '../shared/RxToggle';
+import StrengthPartDisplay from '../shared/StrengthPartDisplay';
 import { isBenchmarkWod, getBenchmarkByName } from '../../lib/benchmarks';
 import { STANDARD_MOVEMENTS } from '../../lib/constants';
 
@@ -33,6 +34,11 @@ export default function CoachWorkoutView({
   selectCustomMovement,
   photoModalUrl,
   setPhotoModalUrl,
+  activeProgram,
+  programSessions,
+  myEnrollment,
+  getMySession,
+  getMyWorkingWeight,
 }) {
   return (
     <>
@@ -84,6 +90,36 @@ export default function CoachWorkoutView({
               )}
             </div>
           </div>
+
+          {(() => {
+            const currentWod = editingWorkout || todayWOD;
+            if (!currentWod?.strengthProgramId || !activeProgram) return null;
+            const session = getMySession(currentWod);
+            if (!session) return null;
+            const workingWeight = getMyWorkingWeight(session);
+            return (
+              <div className="mb-4">
+                <StrengthPartDisplay
+                  program={activeProgram}
+                  session={session}
+                  enrollment={myEnrollment}
+                />
+                <div className="mt-3">
+                  <label className="block text-slate-300 mb-1 text-sm">Weight used (kg)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    placeholder={workingWeight ? `Target: ${workingWeight} kg` : 'Weight in kg'}
+                    value={myResult.strengthScore || ''}
+                    onChange={(e) => setMyResult(prev => ({ ...prev, strengthScore: e.target.value }))}
+                    className="w-full bg-slate-700 text-white px-3 py-2 rounded-lg border border-slate-600 focus:border-emerald-500 focus:outline-none text-sm"
+                  />
+                </div>
+                <div className="border-t border-slate-700 my-4" />
+                <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold mb-3 inline-block">Part B</span>
+              </div>
+            );
+          })()}
 
           <div className="space-y-3 mb-4">
             {(editingWorkout ? editingWorkout.movements : todayWOD?.movements || []).map((movement, idx) => (

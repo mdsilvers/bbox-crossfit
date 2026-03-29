@@ -12,6 +12,7 @@ export function useResults(currentUser) {
     notes: '',
     photoData: null,
     rx: 'rx',
+    strengthScore: '',
   });
   const [editingWorkout, setEditingWorkout] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
@@ -62,6 +63,7 @@ export function useResults(currentUser) {
             notes: todayResult.notes,
             photoData: todayResult.photoData,
             rx: todayResult.rx ?? 'rx',
+            strengthScore: todayResult.strengthScore || '',
             existingResultId: todayResult.id,
             isCustomResult: isCustom,
             customWodName: todayResult.customWodName,
@@ -77,6 +79,7 @@ export function useResults(currentUser) {
             notes: '',
             photoData: null,
             rx: 'rx',
+            strengthScore: '',
             existingResultId: todayResult.id,
             existingResultForDifferentWod: true,
           });
@@ -88,6 +91,7 @@ export function useResults(currentUser) {
           notes: '',
           photoData: null,
           rx: 'rx',
+          strengthScore: '',
         });
       }
 
@@ -124,6 +128,7 @@ export function useResults(currentUser) {
       notes: myResult.notes,
       photoData: myResult.photoData,
       rx: myResult.rx || 'rx',
+      strengthScore: myResult.strengthScore || null,
     };
 
     try {
@@ -233,6 +238,7 @@ export function useResults(currentUser) {
       notes: '',
       photoData: null,
       rx: 'rx',
+      strengthScore: '',
     });
     setIsCustomWorkout(false);
     if (navigate) navigate('workout');
@@ -254,6 +260,7 @@ export function useResults(currentUser) {
       notes: '',
       photoData: null,
       rx: 'rx',
+      strengthScore: '',
     });
     if (navigate) navigate('workout');
   };
@@ -279,6 +286,7 @@ export function useResults(currentUser) {
       notes: result.notes,
       photoData: result.photoData,
       rx: result.rx ?? 'rx',
+      strengthScore: result.strengthScore || '',
       existingResultId: result.id
     });
     if (navigate) navigate('workout');
@@ -308,6 +316,7 @@ export function useResults(currentUser) {
           notes: todayResult.notes,
           photoData: todayResult.photoData,
           rx: todayResult.rx ?? 'rx',
+          strengthScore: todayResult.strengthScore || '',
           existingResultId: todayResult.id,
           isCustomResult: isCustom,
           customWodName: todayResult.customWodName,
@@ -320,6 +329,7 @@ export function useResults(currentUser) {
           notes: '',
           photoData: null,
           rx: 'rx',
+          strengthScore: '',
         });
       }
     }
