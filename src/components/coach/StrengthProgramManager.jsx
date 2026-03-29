@@ -122,9 +122,9 @@ export default function StrengthProgramManager({
     const programPayload = {
       name: formData.name.trim(),
       exercise: formData.exercise.trim(),
-      duration_weeks: formData.duration_weeks,
-      sessions_per_week: formData.sessions_per_week,
-      total_sessions: totalSessions,
+      durationWeeks: formData.duration_weeks,
+      sessionsPerWeek: formData.sessions_per_week,
+      totalSessions: totalSessions,
       notes: formData.notes.trim() || null,
     };
 
