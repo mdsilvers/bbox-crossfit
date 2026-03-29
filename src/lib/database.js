@@ -155,6 +155,8 @@ export async function createWod(wod, userId, userName) {
       photo_url: wod.photoData || null,
       posted_by: userId,
       posted_by_name: userName,
+      strength_program_id: wod.strengthProgramId || null,
+      program_session_override: wod.programSessionOverride || null,
     })
     .select()
     .single();
@@ -172,6 +174,8 @@ export async function updateWod(id, wod, coachId, coachName) {
     movements: wod.movements,
     notes: wod.notes || null,
     photo_url: wod.photoData || null,
+    strength_program_id: wod.strengthProgramId || null,
+    program_session_override: wod.programSessionOverride || null,
     updated_at: new Date().toISOString(),
   };
 
@@ -311,6 +315,7 @@ export async function createResult(result, userId, userName, userEmail) {
       custom_wod_name: result.customWodName || null,
       custom_wod_type: result.customWodType || null,
       rx: result.rx ?? 'rx',
+      strength_score: result.strengthScore || null,
     })
     .select()
     .single();
@@ -330,6 +335,7 @@ export async function updateResult(id, result) {
       custom_wod_name: result.customWodName || null,
       custom_wod_type: result.customWodType || null,
       rx: result.rx ?? 'rx',
+      strength_score: result.strengthScore || null,
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
@@ -626,6 +632,211 @@ export async function getAllCoaches() {
   return data || [];
 }
 
+// ==================== STRENGTH PROGRAM FUNCTIONS ====================
+
+export async function getActiveProgram() {
+  const { data, error } = await supabase
+    .from('strength_programs')
+    .select('*')
+    .eq('status', 'active')
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function getAllPrograms() {
+  const { data, error } = await supabase
+    .from('strength_programs')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function createProgram(program, userId, userName) {
+  const { data, error } = await supabase
+    .from('strength_programs')
+    .insert({
+      name: program.name,
+      exercise: program.exercise,
+      duration_weeks: program.durationWeeks,
+      sessions_per_week: program.sessionsPerWeek,
+      total_sessions: program.totalSessions,
+      status: program.status || 'draft',
+      created_by: userId,
+      created_by_name: userName,
+      notes: program.notes || null,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateProgram(id, program) {
+  const { data, error } = await supabase
+    .from('strength_programs')
+    .update({
+      name: program.name,
+      exercise: program.exercise,
+      duration_weeks: program.durationWeeks,
+      sessions_per_week: program.sessionsPerWeek,
+      total_sessions: program.totalSessions,
+      notes: program.notes || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function activateProgram(id) {
+  // Deactivate any currently active program first
+  await supabase
+    .from('strength_programs')
+    .update({ status: 'completed' })
+    .eq('status', 'active');
+
+  const { data, error } = await supabase
+    .from('strength_programs')
+    .update({ status: 'active' })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deactivateProgram(id) {
+  const { data, error } = await supabase
+    .from('strength_programs')
+    .update({ status: 'completed' })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteProgram(id) {
+  const { error } = await supabase
+    .from('strength_programs')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
+
+// ==================== PROGRAM SESSION FUNCTIONS ====================
+
+export async function getSessionsForProgram(programId) {
+  const { data, error } = await supabase
+    .from('program_sessions')
+    .select('*')
+    .eq('program_id', programId)
+    .order('session_number', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function upsertProgramSessions(programId, sessions) {
+  // Delete existing sessions and replace with new set
+  await supabase
+    .from('program_sessions')
+    .delete()
+    .eq('program_id', programId);
+
+  if (sessions.length === 0) return [];
+
+  const rows = sessions.map((s, i) => ({
+    program_id: programId,
+    session_number: i + 1,
+    sets: s.sets,
+    reps: s.reps,
+    percentage: s.percentage,
+    notes: s.notes || null,
+  }));
+
+  const { data, error } = await supabase
+    .from('program_sessions')
+    .insert(rows)
+    .select();
+  if (error) throw error;
+  return data || [];
+}
+
+// ==================== ENROLLMENT FUNCTIONS ====================
+
+export async function getMyEnrollment(programId, athleteId) {
+  const { data, error } = await supabase
+    .from('athlete_enrollments')
+    .select('*')
+    .eq('program_id', programId)
+    .eq('athlete_id', athleteId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function getAllEnrollments(programId) {
+  const { data, error } = await supabase
+    .from('athlete_enrollments')
+    .select('*, profiles!athlete_id(name, email)')
+    .eq('program_id', programId);
+  if (error) throw error;
+  return data || [];
+}
+
+export async function enrollAthlete(programId, athleteId, oneRepMax) {
+  const { data, error } = await supabase
+    .from('athlete_enrollments')
+    .upsert(
+      {
+        program_id: programId,
+        athlete_id: athleteId,
+        one_rep_max: oneRepMax,
+        current_session: 1,
+      },
+      { onConflict: 'program_id,athlete_id' }
+    )
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateOneRepMax(enrollmentId, oneRepMax) {
+  const { data, error } = await supabase
+    .from('athlete_enrollments')
+    .update({ one_rep_max: oneRepMax })
+    .eq('id', enrollmentId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function advanceSession(enrollmentId, currentSession, totalSessions) {
+  const nextSession = Math.min(currentSession + 1, totalSessions);
+  const { data, error } = await supabase
+    .from('athlete_enrollments')
+    .update({ current_session: nextSession })
+    .eq('id', enrollmentId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function overrideAllEnrollments(programId, sessionNumber) {
+  const { error } = await supabase
+    .from('athlete_enrollments')
+    .update({ current_session: sessionNumber })
+    .eq('program_id', programId);
+  if (error) throw error;
+}
+
 // ==================== HELPER FUNCTIONS ====================
 
 // Transform Supabase profile to app user format
@@ -656,6 +867,8 @@ export function wodToAppFormat(wod) {
     postedById: wod.posted_by,
     postedBy: wod.posted_by_name,
     postedAt: wod.created_at,
+    strengthProgramId: wod.strength_program_id,
+    programSessionOverride: wod.program_session_override,
   };
 }
 
@@ -676,6 +889,7 @@ export function resultToAppFormat(result) {
     customWodName: result.custom_wod_name,
     customWodType: result.custom_wod_type,
     rx: result.rx ?? 'rx',
+    strengthScore: result.strength_score,
     loggedAt: result.created_at,
   };
 }
