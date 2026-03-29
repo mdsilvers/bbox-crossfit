@@ -2,21 +2,24 @@
 
 ## Project Overview
 
-BBOX CrossFit is a React-based gym management app for CrossFit boxes. Coaches program WODs (Workouts of the Day) and athletes log their results.
+BBOX CrossFit is a React-based gym management app for CrossFit boxes. Coaches program WODs (Workouts of the Day) and athletes log their results. Includes social features (reactions, comments, leaderboard), gamification (badges, streaks), and analytics (progress charts, body composition tracking).
 
 **Status:** Production Ready
-**Lines of Code:** ~3,600
-**Main File:** `src/crossfit-box-app.jsx`
+**Lines of Code:** ~11,700
+**Architecture:** Modular components + custom hooks
 
 ---
 
 ## Tech Stack
 
-- **Framework:** React 18 with Hooks (useState, useEffect)
+- **Framework:** React 19 with Hooks (useState, useEffect, useContext, useCallback, useRef)
 - **Styling:** Tailwind CSS v4 (utility classes only)
 - **Icons:** lucide-react
-- **Backend:** Supabase (Auth + PostgreSQL + Row Level Security)
-- **Build:** Vite
+- **Charts:** Recharts
+- **Drag & Drop:** @dnd-kit (core, sortable, utilities)
+- **Dates:** date-fns
+- **Backend:** Supabase (Auth + PostgreSQL + Row Level Security + Realtime)
+- **Build:** Vite 7
 
 ---
 
@@ -38,40 +41,62 @@ npm install              # Install all deps
 
 ## Architecture
 
+### Entry Point
+```
+main.jsx → AuthProvider → App.jsx → CoachDashboard | AthleteDashboard | AuthScreen
+```
+
 ### Component Structure
-Single-file React app with role-based rendering:
-- Login/Signup/Forgot Password screens (unauthenticated)
-- Coach Dashboard (role === 'coach')
-- Athlete Dashboard (role === 'athlete')
+Modular component tree with role-based routing in `App.jsx`:
+- **Unauthenticated:** AuthScreen (Login, Signup, ForgotPassword, ResetPassword)
+- **Coach:** CoachDashboard with tabs: Dashboard, Workout, Program, Athletes, History, Progress
+- **Athlete:** AthleteDashboard with tabs: Dashboard, Workout, History, Progress
 
 ### State Management
+Business logic lives in custom hooks, consumed by dashboard components:
+- `useWorkouts` — WOD CRUD, movement management, coach operations
+- `useResults` — Result CRUD, custom workouts, edit/delete flows
+- `useSocial` — Reactions + comments with optimistic updates
+- `useBadges` — Badge checking, awarding, streak tracking
+- `useLeaderboard` — Realtime leaderboard with Supabase subscriptions
+- `useBenchmarkPRs` — PR calculation from benchmark WOD results
+
 ```javascript
-// CRITICAL: Two separate result states
+// CRITICAL: Two separate result states (in useResults hook)
 workoutResults      // Current user's results only (personal stats)
 allAthleteResults   // All results (coach views like Athletes tab)
 ```
-
-This separation is essential - using `workoutResults` for coach views will show incomplete data.
+This separation is essential — using `workoutResults` for coach views will show incomplete data.
 
 ### Database Schema (Supabase)
 ```sql
--- profiles: User accounts (extends Supabase auth.users)
-profiles (id, email, name, role, group_type, created_at, updated_at)
+-- Core tables
+profiles (id, email, name, role, group_type, streak_weeks, best_streak_weeks, created_at, updated_at)
+wods (id, name, date, type, group_type, movements, notes, photo_url, posted_by, posted_by_name, created_at, updated_at)
+results (id, wod_id, athlete_id, athlete_name, athlete_email, date, time, movements, notes, photo_url, custom_wod_name, custom_wod_type, rx, created_at, updated_at)
 
--- wods: Workouts of the Day
-wods (id, name, date, type, group_type, movements, notes, posted_by, posted_by_name, created_at, updated_at)
--- Unique constraint: (date, group_type)
+-- Social tables
+result_reactions (id, result_id, user_id, reaction_type, created_at)
+result_comments (id, result_id, author_id, author_name, author_role, body, created_at)
+user_badges (id, user_id, badge_key, earned_at)
 
--- results: Athlete workout results
-results (id, wod_id, athlete_id, athlete_name, athlete_email, date, time, movements, notes, photo_url, custom_wod_name, custom_wod_type, created_at, updated_at)
--- Unique constraint: (athlete_id, date)
--- custom_wod_name/type: For athlete-created workouts when not doing coach WOD
+-- Body composition (not yet in schema file — needs migration)
+body_measurements (id, user_id, measured_at, weight_kgs, body_fat_pct, chest_in, waist_in, hips_in, left_arm_in, right_arm_in, left_thigh_in, right_thigh_in, notes)
+
+-- Key constraints
+-- wods: UNIQUE(date, group_type)
+-- results: UNIQUE(athlete_id, date)
+-- result_reactions: UNIQUE(result_id, user_id, reaction_type)
+-- user_badges: UNIQUE(user_id, badge_key)
 ```
 
 ### Row Level Security
 - **profiles:** All authenticated can read, users can only update own
 - **wods:** All authenticated can read, only coaches can write
 - **results:** All authenticated can read, users can only write own
+- **result_reactions:** All authenticated can read, users can only insert/delete own
+- **result_comments:** All authenticated can read, users can only insert/delete own
+- **user_badges:** All authenticated can read, users can only insert own
 
 ---
 
@@ -79,27 +104,84 @@ results (id, wod_id, athlete_id, athlete_name, athlete_email, date, time, moveme
 
 ```
 src/
-├── crossfit-box-app.jsx  # Main React app (~4000 lines)
-├── main.jsx              # React entry point
-├── index.css             # Tailwind imports + custom utilities
+├── App.jsx                         # Root router (auth/coach/athlete)
+├── main.jsx                        # React entry point + AuthProvider
+├── index.css                       # Tailwind imports + custom utilities
+│
+├── contexts/
+│   └── AuthContext.jsx             # Auth state, login/signup/password flows
+│
+├── hooks/
+│   ├── useWorkouts.js              # WOD CRUD, movement management
+│   ├── useResults.js               # Result CRUD, custom workouts
+│   ├── useSocial.js                # Reactions + comments (optimistic)
+│   ├── useBadges.js                # Badge checking + awarding
+│   ├── useLeaderboard.js           # Realtime leaderboard
+│   └── useBenchmarkPRs.js          # PR calculation
+│
+├── components/
+│   ├── auth/
+│   │   ├── AuthScreen.jsx          # Auth container (routes login/signup/forgot/reset)
+│   │   ├── LoginForm.jsx
+│   │   ├── SignupForm.jsx
+│   │   ├── ForgotPassword.jsx
+│   │   └── ResetPasswordForm.jsx
+│   │
+│   ├── coach/
+│   │   ├── CoachDashboard.jsx      # Coach shell (tabs, hooks, data loading)
+│   │   ├── CoachHomeDash.jsx       # Coach home: today's WOD, stats, feed
+│   │   ├── CoachWorkoutView.jsx    # Log own workout
+│   │   ├── CoachProgramView.jsx    # Post/edit/delete WODs
+│   │   ├── CoachAthleteList.jsx    # All athletes + their history
+│   │   └── CoachHistoryView.jsx    # Coach workout history
+│   │
+│   ├── athlete/
+│   │   ├── AthleteDashboard.jsx    # Athlete shell (tabs, hooks, data loading)
+│   │   ├── AthleteHomeDash.jsx     # Today's WOD, stats, missed WODs, PRs, feed
+│   │   ├── AthleteWorkoutView.jsx  # Log workout / custom workout
+│   │   └── AthleteHistoryView.jsx  # Workout history
+│   │
+│   ├── shared/
+│   │   ├── BBoxLogo.jsx            # App logo
+│   │   ├── PhotoModal.jsx          # Full-screen photo viewer
+│   │   ├── PhotoUpload.jsx         # Photo upload with preview
+│   │   ├── PostWodSummary.jsx      # Post-log summary / workout detail modal
+│   │   ├── DeleteConfirmDialog.jsx # Confirmation dialog
+│   │   └── RxToggle.jsx            # RX / Scaled toggle
+│   │
+│   ├── social/
+│   │   ├── ActivityFeed.jsx        # Recent activity feed
+│   │   ├── Leaderboard.jsx         # Daily leaderboard
+│   │   ├── LeaderboardRow.jsx      # Single leaderboard entry
+│   │   ├── ReactionBar.jsx         # Emoji reactions (fist bump, fire, etc.)
+│   │   ├── CommentBubble.jsx       # Comment count indicator
+│   │   ├── CommentThread.jsx       # Comment list + input
+│   │   ├── BadgeDisplay.jsx        # Badge grid display
+│   │   ├── BadgeIcons.jsx          # Badge icon components
+│   │   ├── BadgeToast.jsx          # New badge notification
+│   │   └── StreakBadge.jsx         # Streak display
+│   │
+│   ├── wod/
+│   │   └── MovementAutocomplete.jsx # Movement name autocomplete
+│   │
+│   ├── ScoreInput.jsx              # Type-aware score entry (time/AMRAP/weight/rounds)
+│   ├── ProgressDashboard.jsx       # Charts and analytics
+│   ├── BodyComposition.jsx         # Body measurement tracking
+│   ├── BenchmarkHistory.jsx        # Benchmark attempt history
+│   ├── WeeklySummary.jsx           # Weekly workout summary
+│   └── PercentileRank.jsx          # Percentile ranking display
+│
 └── lib/
-    ├── supabase.js       # Supabase client initialization
-    ├── database.js       # Database service layer (all CRUD operations)
-    └── benchmarks.js     # Benchmark WOD definitions (46 workouts)
+    ├── database.js                 # All Supabase CRUD + format transformers
+    ├── supabase.js                 # Supabase client + password recovery detection
+    ├── benchmarks.js               # 46 benchmark WOD definitions
+    ├── score-utils.js              # Score parsing/formatting/comparison
+    ├── badges.js                   # 8 badge definitions + streak calculation
+    ├── stats.js                    # Workout statistics calculation
+    └── constants.js                # STANDARD_MOVEMENTS list, getLocalToday()
 
-supabase-schema.sql       # Database schema with RLS policies
+supabase-schema.sql                 # Database schema with RLS policies
 ```
-
-### Key sections in crossfit-box-app.jsx:
-- Lines 1-50: Imports, constants, logo component
-- Lines 50-130: State declarations (including custom workout states)
-- Lines 130-350: Auth functions (signup, login, logout, forgot password)
-- Lines 350-600: Data loading functions (WODs, results, missed WODs)
-- Lines 600-850: Coach functions (postWOD, editWOD, deleteWOD)
-- Lines 850-1000: Custom workout functions (startCustomWorkout, logCustomWorkout, etc.)
-- Lines 1000-1300: Login/Signup/Forgot Password UI
-- Lines 1300-2700: Coach Dashboard UI
-- Lines 2700-3600: Athlete Dashboard UI (including custom workout form)
 
 ---
 
@@ -109,20 +191,33 @@ supabase-schema.sql       # Database schema with RLS policies
 Results use `(athlete_id, date)` as unique constraint ensuring one entry per user per day. Logging again on same day updates existing entry.
 
 ### WOD Groups
-- `combined` - All athletes
-- `mens` - Men's group
-- `womens` - Women's group
+- `combined` — All athletes
+- `mens` — Men's group
+- `womens` — Women's group
 
 Athletes see WODs matching their group OR combined. Conflict validation prevents posting combined WOD when group-specific exists (and vice versa).
 
 ### Role-Based Views
 ```javascript
-if (currentUser.role === 'coach') {
-  // Show coach dashboard with 5 tabs: Dashboard, Workout, Program, Athletes, History
-} else {
-  // Show athlete dashboard with 3 tabs: Dashboard, Workout, History
-}
+// App.jsx
+if (!currentUser) return <AuthScreen />;
+if (currentUser.role === 'coach') return <CoachDashboard />;
+return <AthleteDashboard />;
 ```
+
+### Score System
+Scores stored as TEXT in `results.time`, with type-aware handling in `score-utils.js`:
+- **For Time / Chipper / Metcon** → MM:SS (lower is better)
+- **AMRAP** → rounds+reps format (higher is better)
+- **Strength** → weight in kgs (higher is better)
+- **EMOM / Rounds** → round count (higher is better)
+- **Freeform** → any text
+
+### Optimistic Updates
+`useSocial` hook uses optimistic updates for reactions and comments — UI updates immediately, reverts on server error.
+
+### Realtime Subscriptions
+`useLeaderboard` subscribes to Supabase Realtime for live leaderboard updates when results are added/modified.
 
 ### History Sorting
 All workout history views are sorted by WOD date (latest first), not by logged/created timestamp.
@@ -133,26 +228,47 @@ All workout history views are sorted by WOD date (latest first), not by logged/c
 
 ### Authentication
 - Email/password signup with email confirmation
-- Login with session persistence
+- Login with session persistence (auto-refresh tokens)
 - Forgot password flow (Supabase sends reset email)
+- Password recovery redirect detection (captures URL hash before Supabase clears it)
 - Auto-logout on session expiration
 
 ### Coach Features
 - Post WODs (named or unnamed, with workout type)
-- Edit/delete WODs
+- Edit/delete WODs (delete blocked if athletes have logged results)
+- Coach selector (multiple coaches can post WODs)
+- Drag-and-drop movement reordering (@dnd-kit)
+- Section headers in movements
 - View all athletes and their workout history
 - Log own workouts
-- WOD conflict validation
+- WOD conflict validation (combined vs group-specific)
 - Benchmark WOD templates (quick-fill from 46 standard CrossFit benchmarks)
+- Photo upload for WODs
 
 ### Athlete Features
 - View today's WOD
-- Log workout results with time, weights, notes, photo
+- Log workout results with score, weights, notes, photo
+- RX / Scaled toggle
 - Log custom workouts (when traveling or doing different programming)
 - View workout history
 - Log missed WODs (past 7 days)
 - Edit/delete own results
 - Personal Records tracking for benchmark WODs
+
+### Social Features
+- **Reactions:** Fist bump, fire, strong, trophy on any workout result
+- **Comments:** Threaded comments on workout results (500 char limit)
+- **Activity Feed:** Recent workouts and badge earnings across the box
+- **Leaderboard:** Daily realtime leaderboard with gender filtering
+- **Badges:** 8 achievements (First Blood, Week Warrior, Century Club, Iron Will, Benchmark Beast, PR Machine, The Murph, Sub-7 Fran)
+- **Streaks:** Weekly consistency tracking (3+ workouts/week = streak)
+
+### Analytics
+- **Progress Dashboard:** Workout frequency charts (Recharts)
+- **Body Composition:** Track weight, body fat, measurements over time
+- **Weekly Summary:** Week-over-week workout comparison
+- **Percentile Rank:** How you compare to other athletes
+- **Benchmark History:** All attempts for a given benchmark WOD
 
 ### Benchmark WODs
 46 standard CrossFit benchmarks stored in `src/lib/benchmarks.js`:
@@ -167,14 +283,15 @@ Coach workflow:
 
 PR tracking:
 - Only coach-posted benchmark WODs count toward PRs
-- Custom workouts block benchmark names (validation)
-- Athlete dashboard shows Personal Records section with top 5 PRs
+- Custom workouts block benchmark names (validation in `useResults`)
+- Athlete dashboard shows Personal Records section
 
 ### UI Features
 - Photo modal (click to view full-screen)
 - Workout type badges on all history views (red for coach WODs, violet for custom)
-- Custom workout indicator badges in history
-- Benchmark badges (yellow) in history for benchmark WODs
+- Benchmark badges (yellow) in history
+- Post-workout summary modal
+- Movement autocomplete
 - Responsive design (mobile-first)
 
 ---
@@ -182,32 +299,43 @@ PR tracking:
 ## Common Tasks
 
 ### Adding a New Movement
-Edit `STANDARD_MOVEMENTS` array at top of file (alphabetically sorted).
+Edit `STANDARD_MOVEMENTS` array in `src/lib/constants.js` (auto-sorted alphabetically).
 
 ### Changing Logo
-Update URL in `BBoxLogo` component (~line 43):
-```javascript
-src="https://www.antarescatamarans.com/wp-content/uploads/2026/01/BBOX-New-BarBell-smallest.png"
-```
+Update URL in `src/components/shared/BBoxLogo.jsx`.
 
 ### Adding New WOD Type
-1. Add to type dropdown in WOD form
-2. Type badge displays automatically in history views
+1. Add to type dropdown in coach WOD form (`CoachProgramView.jsx`)
+2. Add score category mapping in `src/lib/score-utils.js` → `getScoreCategory()`
+3. Type badge displays automatically in history views
+
+### Adding a New Badge
+Add badge definition to `BADGES` array in `src/lib/badges.js` with `key`, `name`, `description`, `icon`, `color`, `bgColor`, and `check` function.
 
 ### Adding New Tailwind Utilities
-Add to `src/index.css` - Tailwind v4 requires explicit utility definitions for some classes.
+Add to `src/index.css` — Tailwind v4 requires explicit utility definitions for some classes.
+
+### Adding a New Database Table
+1. Add CREATE TABLE + RLS policies to `supabase-schema.sql`
+2. Add CRUD functions to `src/lib/database.js`
+3. Create a hook in `src/hooks/` if needed
 
 ---
 
 ## Known Issues / Technical Debt
+
+See `IMPLEMENTATION-PLAN.md` for detailed implementation plan.
 
 ### Performance
 - [ ] Photos stored as base64 in database → migrate to Supabase Storage
 - [ ] No pagination → will slow with many results
 - [ ] Full data reload on navigation → add caching
 
+### Schema
+- [ ] `body_measurements` table not in `supabase-schema.sql` — needs migration added
+
 ### Missing Features
-- [ ] Push notifications
+- [ ] Push notifications (deferred — requires server-side infrastructure)
 - [ ] Offline/PWA support
 - [ ] Data export
 - [ ] Profile editing (name, group change)
@@ -216,17 +344,58 @@ Add to `src/index.css` - Tailwind v4 requires explicit utility definitions for s
 
 ## Testing
 
-### Critical Test Paths
+### Setup
+- **Unit Tests:** Vitest — tests pure logic modules (score-utils, badges)
+- **E2E Tests:** Playwright — tests full user flows against a dedicated test Supabase project
+- **Test Database:** Separate Supabase project (credentials in `.env.test`, gitignored)
+- **Test Users:** `testcoach@bbox.test` (coach) and `testathlete@bbox.test` (athlete), created by seed script
+
+### Commands
+```bash
+npm run test              # Run unit tests (Vitest)
+npm run test:watch        # Run unit tests in watch mode
+npm run test:e2e          # Run E2E tests (Playwright, headless)
+npm run test:e2e:headed   # Run E2E tests (visible browser)
+npm run test:e2e:ui       # Run E2E tests in Playwright UI mode
+npm run test:seed         # Create test users in test database
+npm run test:cleanup      # Remove test data (preserves users)
+npm run test:all          # Run unit + E2E tests
+```
+
+### Test File Locations
+```
+tests/
+├── unit/
+│   ├── score-utils.test.js    # Score parsing, formatting, comparison (73 tests)
+│   └── badges.test.js         # Badge checking, streak calculation (35 tests)
+├── e2e/
+│   ├── auth.spec.js           # Login, error handling, signup/forgot forms (6 tests)
+│   ├── coach-wod.spec.js      # Post, view, delete WODs (5 tests)
+│   ├── athlete-log.spec.js    # Log workout, custom workout (4 tests)
+│   └── history.spec.js        # History, athletes, progress views (5 tests)
+├── helpers.js                 # Shared E2E helpers (login, navigate)
+├── seed.js                    # Create test users
+├── cleanup.js                 # Remove test data
+├── global-setup.js            # Playwright pre-test setup
+└── global-teardown.js         # Playwright post-test cleanup
+```
+
+### Critical Test Paths (Manual + E2E)
 1. **Auth:** Signup → Check email → Confirm → Login → Session persists on refresh
-2. **Forgot Password:** Click link → Enter email → Check email → Reset password
+2. **Forgot Password:** Click link → Enter email → Check email → Click reset link → Enter new password
 3. **Coach WOD:** Create WOD → Edit → Delete (with/without athlete results)
 4. **Athlete Log:** Log workout → Edit → Delete → Verify in History
-5. **Custom Workout:** Log custom WOD (no coach WOD) → Verify violet badge + "Custom" label in history
+5. **Custom Workout:** Log custom WOD → Verify violet badge + "Custom" label in history
 6. **Missed WODs:** Verify past WODs appear, can log them
 7. **Athletes Tab:** Must show ALL athletes, not just coach (including custom workouts)
 8. **Benchmark WOD (Coach):** Select "Fran" from dropdown → Verify auto-fill → Post → Verify yellow badge
 9. **Benchmark PR (Athlete):** Log result for benchmark WOD → Verify PR appears in Dashboard
-10. **Custom Workout Validation:** Try naming custom workout "Fran" → Should show error and block submission
+10. **Custom Workout Validation:** Try naming custom workout "Fran" → Should show error and block
+11. **Reactions:** Add/remove reactions on a result → Verify optimistic update + persistence
+12. **Comments:** Post comment → Delete own comment → Verify thread updates
+13. **Leaderboard:** Log result → Verify appears on leaderboard in realtime
+14. **Badges:** Log first workout → Verify "First Blood" badge + toast notification
+15. **Score Input:** Log For Time WOD → Verify MM:SS input; Log AMRAP → Verify rounds+reps input
 
 ---
 
@@ -240,30 +409,36 @@ Add to `src/index.css` - Tailwind v4 requires explicit utility definitions for s
 ### Supabase Setup
 1. Create Supabase project
 2. Run `supabase-schema.sql` in SQL Editor
-3. Update credentials in `src/lib/supabase.js`
-4. Disable email confirmation in Auth settings (or configure SMTP)
+3. Set env vars `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+4. Enable Realtime on `results` table (for leaderboard)
+5. Disable email confirmation in Auth settings (or configure SMTP)
 
 ---
 
 ## Code Style
 
 - Functional components with hooks only
+- Business logic in custom hooks (`src/hooks/`), UI in components
 - Tailwind utility classes (custom utilities in index.css)
 - Async/await for all database operations
 - Try/catch around all Supabase calls
+- Optimistic updates for social interactions (reactions, comments)
 - Optional chaining for potentially null values (`currentUser?.email`)
 - Use `.maybeSingle()` instead of `.single()` for queries that might return no results
+- Format transformers in `database.js` (`profileToUser`, `wodToAppFormat`, `resultToAppFormat`)
 
 ---
 
 ## Don't Forget
 
-1. **State separation:** `workoutResults` vs `allAthleteResults`
+1. **State separation:** `workoutResults` vs `allAthleteResults` (in `useResults` hook)
 2. **Database is async:** Always `await` Supabase operations
-3. **Date format:** Use `toISOString().split('T')[0]` for consistent YYYY-MM-DD
+3. **Date format:** Use `getLocalToday()` from `constants.js` for consistent local YYYY-MM-DD
 4. **Role checks:** `currentUser.role === 'coach'` before coach-only operations
 5. **Reload data:** Call appropriate load functions after mutations
 6. **RLS:** Supabase Row Level Security handles authorization
+7. **Score types:** Use `score-utils.js` for all score parsing/formatting/comparison
+8. **Benchmark validation:** Custom workouts cannot use benchmark WOD names
 
 ---
 
@@ -271,6 +446,12 @@ Add to `src/index.css` - Tailwind v4 requires explicit utility definitions for s
 
 | File | Purpose |
 |------|---------|
-| `supabase-schema.sql` | Database schema and RLS policies |
-| `src/lib/database.js` | All database CRUD operations |
-| `src/lib/supabase.js` | Supabase client configuration |
+| `supabase-schema.sql` | Database schema with RLS policies |
+| `src/lib/database.js` | All database CRUD + format transformers |
+| `src/lib/supabase.js` | Supabase client + recovery detection |
+| `src/lib/score-utils.js` | Score parsing, formatting, comparison |
+| `src/lib/badges.js` | Badge definitions + streak calculation |
+| `src/lib/benchmarks.js` | 46 benchmark WOD definitions |
+| `src/lib/constants.js` | Movement list, date helpers |
+| `src/lib/stats.js` | Workout statistics |
+| `src/contexts/AuthContext.jsx` | Auth state provider |
