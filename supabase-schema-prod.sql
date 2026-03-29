@@ -19,6 +19,24 @@ CREATE TABLE IF NOT EXISTS profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ==================== STRENGTH PROGRAM TABLES ====================
+
+-- Strength programs (e.g., "Old School Squat Routine")
+CREATE TABLE IF NOT EXISTS strength_programs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  exercise TEXT NOT NULL,
+  duration_weeks INTEGER NOT NULL,
+  sessions_per_week INTEGER NOT NULL,
+  total_sessions INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'completed')),
+  created_by UUID REFERENCES profiles(id),
+  created_by_name TEXT NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- 1b. WODs (Workouts of the Day)
 CREATE TABLE IF NOT EXISTS wods (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -31,6 +49,8 @@ CREATE TABLE IF NOT EXISTS wods (
   photo_url TEXT,
   posted_by UUID REFERENCES profiles(id),
   posted_by_name TEXT NOT NULL,
+  strength_program_id UUID REFERENCES strength_programs(id) ON DELETE SET NULL,
+  program_session_override INTEGER,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(date, group_type)
@@ -51,6 +71,7 @@ CREATE TABLE IF NOT EXISTS results (
   custom_wod_name TEXT,
   custom_wod_type TEXT,
   rx TEXT DEFAULT 'rx',
+  strength_score TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(athlete_id, date)
@@ -105,6 +126,30 @@ CREATE TABLE IF NOT EXISTS body_measurements (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Individual sessions within a program
+CREATE TABLE IF NOT EXISTS program_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  program_id UUID NOT NULL REFERENCES strength_programs(id) ON DELETE CASCADE,
+  session_number INTEGER NOT NULL,
+  sets INTEGER NOT NULL,
+  reps INTEGER NOT NULL,
+  percentage NUMERIC(5,1) NOT NULL,
+  notes TEXT,
+  UNIQUE(program_id, session_number)
+);
+
+-- Athlete enrollment in active program (1RM + progress)
+CREATE TABLE IF NOT EXISTS athlete_enrollments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  program_id UUID NOT NULL REFERENCES strength_programs(id) ON DELETE CASCADE,
+  athlete_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  one_rep_max NUMERIC(6,1) NOT NULL,
+  current_session INTEGER NOT NULL DEFAULT 1,
+  enrolled_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(program_id, athlete_id)
+);
+
 
 -- ==================== 2. ROW LEVEL SECURITY ====================
 
@@ -115,6 +160,9 @@ ALTER TABLE result_reactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE result_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_badges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE body_measurements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE strength_programs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE program_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE athlete_enrollments ENABLE ROW LEVEL SECURITY;
 
 -- Profiles
 CREATE POLICY "Profiles viewable by all authenticated users"
@@ -182,6 +230,23 @@ CREATE POLICY "Coaches can view athlete measurements"
     )
   );
 
+-- Strength programs RLS
+CREATE POLICY "Programs viewable by authenticated" ON strength_programs FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Coaches insert programs" ON strength_programs FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'coach'));
+CREATE POLICY "Coaches update programs" ON strength_programs FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'coach'));
+CREATE POLICY "Coaches delete programs" ON strength_programs FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'coach'));
+
+-- Program sessions RLS
+CREATE POLICY "Sessions viewable by authenticated" ON program_sessions FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Coaches insert sessions" ON program_sessions FOR INSERT TO authenticated WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'coach'));
+CREATE POLICY "Coaches update sessions" ON program_sessions FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'coach'));
+CREATE POLICY "Coaches delete sessions" ON program_sessions FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'coach'));
+
+-- Athlete enrollments RLS
+CREATE POLICY "Enrollments viewable by authenticated" ON athlete_enrollments FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Users insert own enrollment" ON athlete_enrollments FOR INSERT TO authenticated WITH CHECK (auth.uid() = athlete_id);
+CREATE POLICY "Users update own enrollment" ON athlete_enrollments FOR UPDATE TO authenticated USING (auth.uid() = athlete_id);
+
 
 -- ==================== 3. INDEXES ====================
 
@@ -195,6 +260,10 @@ CREATE INDEX IF NOT EXISTS idx_reactions_result_id ON result_reactions(result_id
 CREATE INDEX IF NOT EXISTS idx_reactions_user_id ON result_reactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_comments_result_id ON result_comments(result_id);
 CREATE INDEX IF NOT EXISTS idx_badges_user_id ON user_badges(user_id);
+CREATE INDEX IF NOT EXISTS idx_program_sessions_program ON program_sessions(program_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_program ON athlete_enrollments(program_id);
+CREATE INDEX IF NOT EXISTS idx_enrollments_athlete ON athlete_enrollments(athlete_id);
+CREATE INDEX IF NOT EXISTS idx_wods_program ON wods(strength_program_id);
 
 
 -- ==================== 4. TRIGGERS ====================
@@ -217,6 +286,14 @@ CREATE TRIGGER update_wods_updated_at
 
 CREATE TRIGGER update_results_updated_at
   BEFORE UPDATE ON results
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_strength_programs_updated_at
+  BEFORE UPDATE ON strength_programs
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_enrollments_updated_at
+  BEFORE UPDATE ON athlete_enrollments
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 
