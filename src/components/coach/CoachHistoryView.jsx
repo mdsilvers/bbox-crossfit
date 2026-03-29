@@ -4,6 +4,7 @@ import { formatScore } from '../../lib/score-utils';
 import { isBenchmarkWod } from '../../lib/benchmarks';
 import ReactionBar from '../social/ReactionBar';
 import CommentThread from '../social/CommentThread';
+import StrengthPartDisplay from '../shared/StrengthPartDisplay';
 
 export default function CoachHistoryView({
   workoutResults,
@@ -25,6 +26,9 @@ export default function CoachHistoryView({
   loadReactionsForResults,
   loadCommentsForResults,
   showWorkoutSummary,
+  activeProgram,
+  programSessions,
+  myEnrollment,
 }) {
   const [coachHistorySearch, setCoachHistorySearch] = useState('');
 
@@ -194,6 +198,19 @@ export default function CoachHistoryView({
                           <span><span className="text-green-400 font-medium">{completedCount}</span> completed</span>
                         </div>
                       </div>
+
+                      {/* Part A Strength Score */}
+                      {result.strengthScore && wod?.strengthProgramId && activeProgram && (
+                        <div className="mb-2">
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="bg-emerald-600 text-white px-1.5 py-0.5 rounded text-xs font-bold">A</span>
+                            <span className="text-slate-300">{activeProgram.exercise}</span>
+                            <span className="text-emerald-400 font-medium">{result.strengthScore} kg</span>
+                          </div>
+                          <div className="border-t border-slate-700/50 my-2" />
+                          <span className="bg-red-600 text-white px-1.5 py-0.5 rounded text-xs font-bold">B</span>
+                        </div>
+                      )}
 
                       {(() => {
                         const realMovements = result.movements.filter(m => m.type !== 'header');

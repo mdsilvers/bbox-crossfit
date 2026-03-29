@@ -3,6 +3,7 @@ import { X, Users } from 'lucide-react';
 import { formatScore, getScoreLabel, getScoreCategory } from '../../lib/score-utils';
 import { useLeaderboard } from '../../hooks/useLeaderboard';
 import LeaderboardRow from '../social/LeaderboardRow';
+import StrengthPartDisplay from './StrengthPartDisplay';
 
 const RANKABLE_TYPES = ['for time', 'amrap', 'strength', 'chipper', 'metcon'];
 
@@ -22,6 +23,9 @@ export default function PostWodSummary({
   onToggleReaction,
   loadReactionsForResults,
   onDismiss,
+  activeProgram,
+  programSession,
+  enrollment,
 }) {
   const wodType = isCustomWorkout ? result?.customWodType : wod?.type;
   const wodName = isCustomWorkout
@@ -146,6 +150,20 @@ export default function PostWodSummary({
           ) : (
             <div className="mb-4">
               <div className="text-3xl font-bold text-green-400">Completed</div>
+            </div>
+          )}
+
+          {/* Part A Strength Score */}
+          {result?.strengthScore && activeProgram && (
+            <div className="mb-4">
+              <StrengthPartDisplay
+                program={activeProgram}
+                session={programSession}
+                enrollment={enrollment}
+                strengthScore={result.strengthScore}
+              />
+              <div className="border-t border-slate-700 my-3" />
+              <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold mb-2 inline-block">Part B</span>
             </div>
           )}
 

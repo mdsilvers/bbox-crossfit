@@ -214,6 +214,9 @@ export default function AthleteDashboard() {
               loadReactionsForResults={social.loadReactionsForResults}
               loadCommentsForResults={social.loadCommentsForResults}
               showWorkoutSummary={(result) => showWorkoutSummary(result, allWODs)}
+              activeProgram={strengthProgram.activeProgram}
+              programSessions={strengthProgram.programSessions}
+              myEnrollment={strengthProgram.myEnrollment}
             />
           )}
 
@@ -269,6 +272,7 @@ export default function AthleteDashboard() {
                 // Advance strength program session if WOD had program attached
                 if (todayWOD?.strengthProgramId && strengthProgram.myEnrollment) {
                   await strengthProgram.advanceMySession();
+                  await strengthProgram.loadMyEnrollment(strengthProgram.activeProgram?.id);
                 }
               })}
               logCustomWorkout={() => logCustomWorkout(allWODs, async (results) => {
@@ -348,6 +352,8 @@ export default function AthleteDashboard() {
           reactions={social.reactions}
           onToggleReaction={social.toggleReaction}
           loadReactionsForResults={social.loadReactionsForResults}
+          activeProgram={strengthProgram.activeProgram}
+          enrollment={strengthProgram.myEnrollment}
           onDismiss={() => setPostWodSummaryData(null)}
         />
       )}

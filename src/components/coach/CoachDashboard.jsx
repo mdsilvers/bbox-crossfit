@@ -262,6 +262,9 @@ export default function CoachDashboard() {
               loadReactionsForResults={social.loadReactionsForResults}
               loadCommentsForResults={social.loadCommentsForResults}
               showWorkoutSummary={(result) => showWorkoutSummary(result, allWODs)}
+              activeProgram={strengthProgram.activeProgram}
+              programSessions={strengthProgram.programSessions}
+              myEnrollment={strengthProgram.myEnrollment}
             />
           )}
 
@@ -462,6 +465,8 @@ export default function CoachDashboard() {
           reactions={social.reactions}
           onToggleReaction={social.toggleReaction}
           loadReactionsForResults={social.loadReactionsForResults}
+          activeProgram={strengthProgram.activeProgram}
+          enrollment={strengthProgram.myEnrollment}
           onDismiss={() => {
             const wasPostLog = postWodSummaryData.mode === 'post-log';
             setPostWodSummaryData(null);
