@@ -60,6 +60,7 @@ Business logic lives in custom hooks, consumed by dashboard components:
 - `useBadges` — Badge checking, awarding, streak tracking
 - `useLeaderboard` — Realtime leaderboard with Supabase subscriptions
 - `useBenchmarkPRs` — PR calculation from benchmark WOD results
+- `useStrengthProgram` — Program CRUD, enrollment, session resolution, 1RM management
 
 ```javascript
 // CRITICAL: Two separate result states (in useResults hook)
@@ -72,8 +73,13 @@ This separation is essential — using `workoutResults` for coach views will sho
 ```sql
 -- Core tables
 profiles (id, email, name, role, group_type, streak_weeks, best_streak_weeks, created_at, updated_at)
-wods (id, name, date, type, group_type, movements, notes, photo_url, posted_by, posted_by_name, created_at, updated_at)
-results (id, wod_id, athlete_id, athlete_name, athlete_email, date, time, movements, notes, photo_url, custom_wod_name, custom_wod_type, rx, created_at, updated_at)
+wods (id, name, date, type, group_type, movements, notes, photo_url, posted_by, posted_by_name, strength_program_id, program_session_override, created_at, updated_at)
+results (id, wod_id, athlete_id, athlete_name, athlete_email, date, time, movements, notes, photo_url, custom_wod_name, custom_wod_type, rx, strength_score, created_at, updated_at)
+
+-- Strength program tables
+strength_programs (id, name, exercise, duration_weeks, sessions_per_week, total_sessions, status, created_by, created_by_name, notes, created_at, updated_at)
+program_sessions (id, program_id, session_number, sets, reps, percentage, notes)
+athlete_enrollments (id, program_id, athlete_id, one_rep_max, current_session, enrolled_at, updated_at)
 
 -- Social tables
 result_reactions (id, result_id, user_id, reaction_type, created_at)
@@ -117,7 +123,8 @@ src/
 │   ├── useSocial.js                # Reactions + comments (optimistic)
 │   ├── useBadges.js                # Badge checking + awarding
 │   ├── useLeaderboard.js           # Realtime leaderboard
-│   └── useBenchmarkPRs.js          # PR calculation
+│   ├── useBenchmarkPRs.js          # PR calculation
+│   └── useStrengthProgram.js       # Program CRUD, enrollment, session resolution
 │
 ├── components/
 │   ├── auth/
@@ -133,7 +140,8 @@ src/
 │   │   ├── CoachWorkoutView.jsx    # Log own workout
 │   │   ├── CoachProgramView.jsx    # Post/edit/delete WODs
 │   │   ├── CoachAthleteList.jsx    # All athletes + their history
-│   │   └── CoachHistoryView.jsx    # Coach workout history
+│   │   ├── CoachHistoryView.jsx    # Coach workout history
+│   │   └── StrengthProgramManager.jsx # Program creation/management UI
 │   │
 │   ├── athlete/
 │   │   ├── AthleteDashboard.jsx    # Athlete shell (tabs, hooks, data loading)
@@ -286,6 +294,16 @@ PR tracking:
 - Custom workouts block benchmark names (validation in `useResults`)
 - Athlete dashboard shows Personal Records section
 
+### Strength Programs
+- Coach defines multi-week programs (e.g., Old School Squat Routine) with sessions specifying sets x reps x percentage
+- One active program at a time, whole box participates
+- Athletes enter 1RM, app calculates working weights (rounded to nearest 2.5 kg)
+- Completion-based progression through sessions
+- Coach can override all athletes to a specific session
+- Programs attach as Part A of daily WODs, Part B is the regular WOD
+- Two-part scoring: strength_score (Part A weight) + time (Part B score)
+- Emerald color scheme distinguishes strength program UI from WOD red and custom violet
+
 ### UI Features
 - Photo modal (click to view full-screen)
 - Workout type badges on all history views (red for coach WODs, violet for custom)
@@ -367,7 +385,8 @@ npm run test:all          # Run unit + E2E tests
 tests/
 ├── unit/
 │   ├── score-utils.test.js    # Score parsing, formatting, comparison (73 tests)
-│   └── badges.test.js         # Badge checking, streak calculation (35 tests)
+│   ├── badges.test.js         # Badge checking, streak calculation (35 tests)
+│   └── strength-program.test.js # Weight rounding, working weight calculation (6 tests)
 ├── e2e/
 │   ├── auth.spec.js           # Login, error handling, signup/forgot forms (6 tests)
 │   ├── coach-wod.spec.js      # Post, view, delete WODs (5 tests)
@@ -396,6 +415,11 @@ tests/
 13. **Leaderboard:** Log result → Verify appears on leaderboard in realtime
 14. **Badges:** Log first workout → Verify "First Blood" badge + toast notification
 15. **Score Input:** Log For Time WOD → Verify MM:SS input; Log AMRAP → Verify rounds+reps input
+16. **Strength Program (Coach):** Create program → Add sessions → Activate → Verify athletes prompted
+17. **1RM Enrollment:** Enter 1RM → Verify working weight calculation → Update 1RM → Verify recalculation
+18. **Two-Part WOD:** Post WOD with program → Log Part A + Part B → Verify both scores in history
+19. **Session Progression:** Log result → Verify session advances → Log again → Verify next session
+20. **Coach Override:** Override all to session 5 → Verify all athletes see session 5
 
 ---
 

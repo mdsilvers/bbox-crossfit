@@ -25,15 +25,15 @@ test.describe('Athlete Workout Logging', () => {
       await page.click('button:has-text("Program")');
       await page.waitForTimeout(500);
 
-      // Click "New WOD" button to open the form
-      await page.click('button:has-text("New WOD")');
-      await page.waitForSelector('h2:has-text("Post New WOD")', { timeout: 10000 });
+      // Scroll down and click "New WOD" button (below Strength Programs section)
+      const newWodBtn = page.locator('button:has-text("New WOD")');
+      await newWodBtn.scrollIntoViewIfNeeded();
+      await newWodBtn.click();
+      await page.waitForSelector('text=Post New WOD', { timeout: 10000 });
 
-      // Set the date to today (it defaults to today, but be explicit)
-      const today = getLocalToday();
-      await page.fill('input[type="date"]', today);
+      // Date defaults to today — no need to change it
 
-      // Fill in a movement name in the first movement input
+      // Fill in a movement name
       const movementInput = page.locator('input[placeholder="Type to search movements..."]').first();
       await movementInput.fill('Pull-ups');
       await page.waitForTimeout(300);
@@ -42,16 +42,20 @@ test.describe('Athlete Workout Logging', () => {
       const repsInput = page.locator('input[placeholder="Reps (e.g., 21-15-9)"]').first();
       await repsInput.fill('21-15-9');
 
-      // Register dialog handler before clicking Post WOD
-      page.once('dialog', async (dialog) => {
-        await dialog.accept();
-      });
+      // Set up dialog handler as promise BEFORE clicking
+      const dialogPromise = page.waitForEvent('dialog');
 
-      // Submit the WOD
-      await page.click('button:has-text("Post WOD")');
+      // Scroll to and submit the WOD
+      const postBtn = page.locator('button:has-text("Post WOD")');
+      await postBtn.scrollIntoViewIfNeeded();
+      await postBtn.click();
 
-      // Wait for the form to close (back to WOD list)
-      await page.waitForSelector('button:has-text("New WOD")', { timeout: 10000 });
+      // Wait for and accept the dialog
+      const dialog = await dialogPromise;
+      await dialog.accept();
+
+      // Wait for the form to close
+      await page.waitForTimeout(2000);
     } finally {
       await context.close();
     }
