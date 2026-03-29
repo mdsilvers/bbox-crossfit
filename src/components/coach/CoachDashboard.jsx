@@ -239,6 +239,8 @@ export default function CoachDashboard() {
               myEnrollment={strengthProgram.myEnrollment}
               getMySession={strengthProgram.getMySession}
               getMyWorkingWeight={strengthProgram.getMyWorkingWeight}
+              onEnroll={(orm) => strengthProgram.enroll(strengthProgram.activeProgram.id, orm)}
+              onUpdateOneRepMax={strengthProgram.updateMyOneRepMax}
             />
           )}
 

@@ -7,6 +7,8 @@ import Leaderboard from '../social/Leaderboard';
 import ReactionBar from '../social/ReactionBar';
 import CommentThread from '../social/CommentThread';
 import StreakBadge from '../social/StreakBadge';
+import StrengthPartDisplay from '../shared/StrengthPartDisplay';
+import OneRepMaxPrompt from '../athlete/OneRepMaxPrompt';
 
 export default function CoachHomeDash({
   currentUser,
@@ -37,6 +39,13 @@ export default function CoachHomeDash({
   myBadges = [],
   streakWeeks = 0,
   showWorkoutSummary,
+  activeProgram,
+  programSessions,
+  myEnrollment,
+  getMySession,
+  getMyWorkingWeight,
+  onEnroll,
+  onUpdateOneRepMax,
 }) {
   return (
     <>
@@ -105,6 +114,18 @@ export default function CoachHomeDash({
               </span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* 1RM Enrollment Prompt (coaches participate too) */}
+      {activeProgram && (
+        <div className="mb-4">
+          <OneRepMaxPrompt
+            program={activeProgram}
+            enrollment={myEnrollment}
+            onEnroll={onEnroll}
+            onUpdate={onUpdateOneRepMax}
+          />
         </div>
       )}
 
@@ -274,6 +295,22 @@ export default function CoachHomeDash({
               </div>
             </div>
           </div>
+
+          {/* Part A: Strength Program (if attached) */}
+          {todayWOD.strengthProgramId && activeProgram && (() => {
+            const session = getMySession ? getMySession(todayWOD) : null;
+            return session ? (
+              <div className="mb-4">
+                <StrengthPartDisplay
+                  program={activeProgram}
+                  session={session}
+                  enrollment={myEnrollment}
+                />
+                <div className="border-t border-slate-700 my-3" />
+                <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold">Part B</span>
+              </div>
+            ) : null;
+          })()}
 
           {/* WOD Details Preview */}
           <div className="bg-slate-700 rounded-xl p-4 mb-4">
