@@ -13,7 +13,9 @@ export function useWorkouts(currentUser) {
     type: 'For Time',
     group: 'combined',
     movements: [{ name: '', reps: '', notes: '' }],
-    notes: ''
+    notes: '',
+    strengthProgramId: null,
+    programSessionOverride: null,
   });
   const [movementInput, setMovementInput] = useState(['']);
   const [showMovementDropdown, setShowMovementDropdown] = useState([false]);
@@ -146,7 +148,9 @@ export function useWorkouts(currentUser) {
         type: 'For Time',
         group: 'combined',
         movements: [{ name: '', reps: '', notes: '' }],
-        notes: ''
+        notes: '',
+        strengthProgramId: null,
+        programSessionOverride: null,
       });
       setMovementInput(['']);
       setShowMovementDropdown([false]);

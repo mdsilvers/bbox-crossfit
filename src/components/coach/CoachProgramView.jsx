@@ -1,5 +1,6 @@
 import React from 'react';
 import { Plus, Trash2, Dumbbell, Calendar, Users, Image, GripVertical } from 'lucide-react';
+import StrengthProgramManager from './StrengthProgramManager';
 import { isBenchmarkWod, getBenchmarkByName, getBenchmarksByCategory } from '../../lib/benchmarks';
 import { STANDARD_MOVEMENTS, getLocalToday } from '../../lib/constants';
 import {
@@ -183,6 +184,7 @@ export default function CoachProgramView({
   coaches,
   selectedCoach,
   setSelectedCoach,
+  strengthProgram,
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -211,6 +213,23 @@ export default function CoachProgramView({
     <>
       {!showWODForm ? (
         <>
+          <StrengthProgramManager
+            allPrograms={strengthProgram.allPrograms}
+            activeProgram={strengthProgram.activeProgram}
+            programSessions={strengthProgram.programSessions}
+            allEnrollments={strengthProgram.allEnrollments}
+            loadAllPrograms={strengthProgram.loadAllPrograms}
+            loadSessionsForProgram={strengthProgram.loadSessionsForProgram}
+            loadAllEnrollments={strengthProgram.loadAllEnrollments}
+            createProgram={strengthProgram.createProgram}
+            updateProgram={strengthProgram.updateProgram}
+            activateProgram={strengthProgram.activateProgram}
+            deactivateProgram={strengthProgram.deactivateProgram}
+            deleteProgramById={strengthProgram.deleteProgramById}
+            overrideAllToSession={strengthProgram.overrideAllToSession}
+          />
+          <div className="border-t border-slate-700 my-4" />
+
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-white">WOD Programming</h2>
             <button
@@ -224,7 +243,9 @@ export default function CoachProgramView({
                   type: 'For Time',
                   group: 'combined',
                   movements: [{ name: '', reps: '', notes: '' }],
-                  notes: ''
+                  notes: '',
+                  strengthProgramId: null,
+                  programSessionOverride: null,
                 });
                 setMovementInput(['']);
                 setShowMovementDropdown([false]);
@@ -431,7 +452,9 @@ export default function CoachProgramView({
                   type: 'For Time',
                   group: 'combined',
                   movements: [{ name: '', reps: '', notes: '' }],
-                  notes: ''
+                  notes: '',
+                  strengthProgramId: null,
+                  programSessionOverride: null,
                 });
                 setMovementInput(['']);
                 setShowMovementDropdown([false]);
@@ -561,6 +584,49 @@ export default function CoachProgramView({
             </div>
           </div>
 
+          {/* Attach Strength Program Toggle */}
+          {strengthProgram.activeProgram && (
+            <div className="mb-4">
+              <label className="flex items-center gap-3 cursor-pointer bg-emerald-900/30 border border-emerald-700/50 rounded-lg p-3">
+                <input
+                  type="checkbox"
+                  checked={!!newWOD.strengthProgramId}
+                  onChange={(e) => setNewWOD({
+                    ...newWOD,
+                    strengthProgramId: e.target.checked ? strengthProgram.activeProgram.id : null,
+                    programSessionOverride: null,
+                  })}
+                  className="w-4 h-4 accent-emerald-500"
+                />
+                <div>
+                  <span className="text-white text-sm font-medium">
+                    Attach: {strengthProgram.activeProgram.name}
+                  </span>
+                  <span className="text-emerald-400 text-xs block">
+                    {strengthProgram.activeProgram.exercise} as Part A
+                  </span>
+                </div>
+              </label>
+              {newWOD.strengthProgramId && (
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="text-slate-400 text-xs">Session override (optional):</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={strengthProgram.activeProgram.total_sessions}
+                    placeholder="Auto"
+                    value={newWOD.programSessionOverride || ''}
+                    onChange={(e) => setNewWOD({
+                      ...newWOD,
+                      programSessionOverride: e.target.value ? parseInt(e.target.value, 10) : null,
+                    })}
+                    className="w-20 bg-slate-700 text-white px-2 py-1 rounded border border-slate-600 text-xs"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="mb-4">
             <div className="flex items-center justify-between mb-3">
               <label className="block text-slate-300 font-semibold text-sm">Movements</label>
@@ -681,7 +747,9 @@ export default function CoachProgramView({
                   type: 'For Time',
                   group: 'combined',
                   movements: [{ name: '', reps: '', notes: '' }],
-                  notes: ''
+                  notes: '',
+                  strengthProgramId: null,
+                  programSessionOverride: null,
                 });
                 setMovementInput(['']);
                 setShowMovementDropdown([false]);

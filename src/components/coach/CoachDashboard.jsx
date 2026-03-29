@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useResults } from '../../hooks/useResults';
 import { useBenchmarkPRs } from '../../hooks/useBenchmarkPRs';
+import { useStrengthProgram } from '../../hooks/useStrengthProgram';
 import { useSocial } from '../../hooks/useSocial';
 import { useBadges } from '../../hooks/useBadges';
 import { calculateStats } from '../../lib/stats';
@@ -30,6 +31,7 @@ export default function CoachDashboard() {
 
   const social = useSocial(currentUser);
   const badgesHook = useBadges(currentUser);
+  const strengthProgram = useStrengthProgram(currentUser);
 
   const {
     allWODs,
@@ -120,6 +122,8 @@ export default function CoachDashboard() {
         loadMyResults(wod, null),
         loadAllResults(),
         loadAllWODs(),
+        strengthProgram.loadActiveProgram(),
+        strengthProgram.loadAllPrograms(),
       ]);
 
       // Phase 3: Depends on results & wods
@@ -225,6 +229,11 @@ export default function CoachDashboard() {
               myBadges={badgesHook.myBadges}
               streakWeeks={badgesHook.streakWeeks}
               showWorkoutSummary={(result) => showWorkoutSummary(result, allWODs)}
+              activeProgram={strengthProgram.activeProgram}
+              programSessions={strengthProgram.programSessions}
+              myEnrollment={strengthProgram.myEnrollment}
+              getMySession={strengthProgram.getMySession}
+              getMyWorkingWeight={strengthProgram.getMyWorkingWeight}
             />
           )}
 
@@ -286,6 +295,11 @@ export default function CoachDashboard() {
               selectCustomMovement={selectCustomMovement}
               photoModalUrl={photoModalUrl}
               setPhotoModalUrl={setPhotoModalUrl}
+              activeProgram={strengthProgram.activeProgram}
+              programSessions={strengthProgram.programSessions}
+              myEnrollment={strengthProgram.myEnrollment}
+              getMySession={strengthProgram.getMySession}
+              getMyWorkingWeight={strengthProgram.getMyWorkingWeight}
             />
           )}
 
@@ -330,6 +344,7 @@ export default function CoachDashboard() {
               coaches={coaches}
               selectedCoach={selectedCoach}
               setSelectedCoach={setSelectedCoach}
+              strengthProgram={strengthProgram}
             />
           )}
 
