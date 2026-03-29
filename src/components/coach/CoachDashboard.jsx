@@ -181,6 +181,7 @@ export default function CoachDashboard() {
             </div>
             <button
               onClick={onLogout}
+              data-testid="logout-button"
               className="text-slate-400 hover:text-white p-2"
             >
               <LogOut className="w-5 h-5" />

@@ -29,12 +29,18 @@ test.describe('Coach WOD Management', () => {
     await expect(page.locator('h2:has-text("Post New WOD")')).toBeVisible();
   });
 
-  test('can post a WOD for today', async ({ page }) => {
+  test('can post a WOD', async ({ page }) => {
     await login(page, 'coach');
     await navigateToTab(page, 'Program');
 
     await page.click('button:has-text("New WOD")');
     await expect(page.locator('h2:has-text("Post New WOD")')).toBeVisible();
+
+    // Use a date 3 days from now to avoid conflicts with other test files
+    const d = new Date();
+    d.setDate(d.getDate() + 3);
+    const testDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    await page.fill('input[type="date"]', testDate);
 
     // Fill in the movement name
     await page.fill('input[placeholder="Type to search movements..."]', 'Burpees');
