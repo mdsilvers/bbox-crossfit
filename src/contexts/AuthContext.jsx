@@ -31,6 +31,7 @@ export function AuthProvider({ children }) {
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [authInitializing, setAuthInitializing] = useState(true);
 
   // Track password recovery flow via ref (survives across async callbacks)
   const isRecoveryFlow = useRef(isPasswordRecoveryRedirect);
@@ -50,7 +51,10 @@ export function AuthProvider({ children }) {
 
     // Check for existing session (skip during password recovery to preserve the session)
     const initAuth = async () => {
-      if (isRecoveryFlow.current) return;
+      if (isRecoveryFlow.current) {
+        if (mounted) setAuthInitializing(false);
+        return;
+      }
       try {
         const session = await db.getCurrentSession();
         if (session?.user && mounted) {
@@ -61,6 +65,8 @@ export function AuthProvider({ children }) {
         // No session or expired — expected for logged-out users
         // Clear any stale session
         await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+      } finally {
+        if (mounted) setAuthInitializing(false);
       }
     };
     initAuth();
@@ -262,6 +268,7 @@ export function AuthProvider({ children }) {
 
   const value = {
     currentUser,
+    authInitializing,
     loginEmail, setLoginEmail,
     loginPassword, setLoginPassword,
     signupEmail, setSignupEmail,
