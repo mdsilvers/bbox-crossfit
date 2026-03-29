@@ -8,6 +8,7 @@ export function useBadges(currentUser) {
   const [streakWeeks, setStreakWeeks] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
   const [newBadgeToast, setNewBadgeToast] = useState(null);
+  const [badgeCacheTime, setBadgeCacheTime] = useState(0);
 
   const loadMyBadges = useCallback(async () => {
     if (!currentUser) return [];
@@ -40,14 +41,10 @@ export function useBadges(currentUser) {
       const existingKeys = myBadges;
       const newBadgeKeys = checkBadges(results, allWODs, benchmarkPRs, streak, existingKeys);
 
-      // Award new badges
-      for (const key of newBadgeKeys) {
-        await db.awardBadge(currentUser.id, key);
-      }
-
+      // Award new badges in a single batch call
       if (newBadgeKeys.length > 0) {
+        await db.awardBadges(currentUser.id, newBadgeKeys);
         setMyBadges(prev => [...prev, ...newBadgeKeys]);
-        // Show toast for the first new badge
         const badge = BADGES.find(b => b.key === newBadgeKeys[0]);
         if (badge) {
           setNewBadgeToast(badge);
@@ -60,14 +57,19 @@ export function useBadges(currentUser) {
 
   const loadAllUserBadges = useCallback(async () => {
     try {
+      // Skip if cache is fresh (less than 5 minutes old)
+      if (badgeCacheTime && Date.now() - badgeCacheTime < 5 * 60 * 1000) {
+        return allUserBadges;
+      }
       const grouped = await db.getAllUserBadges();
       setAllUserBadges(grouped);
+      setBadgeCacheTime(Date.now());
       return grouped;
     } catch (error) {
       console.error('Error loading all user badges:', error);
       return {};
     }
-  }, []);
+  }, [badgeCacheTime, allUserBadges]);
 
   const dismissToast = useCallback(() => {
     setNewBadgeToast(null);

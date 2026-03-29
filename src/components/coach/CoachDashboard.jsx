@@ -114,17 +114,22 @@ export default function CoachDashboard() {
     const loadData = async () => {
       if (!currentUser) return;
 
-      // Phase 1: Today's WOD needed by loadMyResults
-      const wod = await loadTodayWOD();
-
-      // Phase 2: Independent data loads
-      const [myResults, , wods] = await Promise.all([
-        loadMyResults(wod, null),
-        loadAllResults(),
+      // Phase 1: Independent queries run in parallel
+      const [wod, wods] = await Promise.all([
+        loadTodayWOD(),
         loadAllWODs(),
+        loadAllResults(),
         strengthProgram.loadActiveProgram(),
         strengthProgram.loadAllPrograms(),
       ]);
+
+      // Phase 2: Depends on wod from Phase 1
+      const myResults = await loadMyResults(wod, null);
+
+      // Phase 2b: Depends on activeProgram being loaded
+      if (strengthProgram.activeProgram) {
+        await strengthProgram.loadMyEnrollment(strengthProgram.activeProgram.id);
+      }
 
       // Phase 3: Depends on results & wods
       await loadMissedWODs(myResults);

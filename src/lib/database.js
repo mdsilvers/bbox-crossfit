@@ -113,11 +113,12 @@ export async function getTodayWod(userGroup, role) {
   return wod;
 }
 
-export async function getAllWods() {
+export async function getAllWods(limit = 365) {
   const { data, error } = await supabase
     .from('wods')
     .select('*')
-    .order('date', { ascending: false });
+    .order('date', { ascending: false })
+    .limit(limit);
 
   if (error) throw error;
   return data || [];
@@ -271,17 +272,12 @@ export async function getResultsByAthlete(athleteId) {
   return data || [];
 }
 
-export async function getAllResults(limit) {
-  let query = supabase
+export async function getAllResults(limit = 100) {
+  const { data, error } = await supabase
     .from('results')
     .select('*')
-    .order('created_at', { ascending: false });
-
-  if (limit) {
-    query = query.limit(limit);
-  }
-
-  const { data, error } = await query;
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
   if (error) throw error;
   return data || [];
@@ -578,6 +574,18 @@ export async function awardBadge(userId, badgeKey) {
 
   if (error) throw error;
   return data;
+}
+
+export async function awardBadges(userId, badgeKeys) {
+  if (!badgeKeys || badgeKeys.length === 0) return;
+  const rows = badgeKeys.map(key => ({
+    user_id: userId,
+    badge_key: key,
+  }));
+  const { error } = await supabase
+    .from('user_badges')
+    .upsert(rows, { onConflict: 'user_id,badge_key' });
+  if (error) throw error;
 }
 
 export async function getAllUserBadges() {
