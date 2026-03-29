@@ -1,5 +1,7 @@
 import React from 'react';
 import { Plus, Dumbbell, Clock, Calendar, Trophy } from 'lucide-react';
+import OneRepMaxPrompt from './OneRepMaxPrompt';
+import StrengthPartDisplay from '../shared/StrengthPartDisplay';
 import { formatScore, getScoreLabel } from '../../lib/score-utils';
 import { isBenchmarkWod } from '../../lib/benchmarks';
 import { getLocalToday } from '../../lib/constants';
@@ -36,6 +38,13 @@ export default function AthleteHomeDash({
   myBadges = [],
   streakWeeks = 0,
   showWorkoutSummary,
+  activeProgram,
+  programSessions,
+  myEnrollment,
+  getMySession,
+  getMyWorkingWeight,
+  onEnroll,
+  onUpdateOneRepMax,
 }) {
   return (
     <>
@@ -105,6 +114,16 @@ export default function AthleteHomeDash({
             </div>
           )}
         </div>
+      )}
+
+      {/* Strength Program 1RM Prompt */}
+      {activeProgram && (
+        <OneRepMaxPrompt
+          program={activeProgram}
+          enrollment={myEnrollment}
+          onEnroll={onEnroll}
+          onUpdate={onUpdateOneRepMax}
+        />
       )}
 
       {/* Quick Action - Today's WOD Status */}
@@ -253,6 +272,20 @@ export default function AthleteHomeDash({
 
           {/* WOD Details Preview */}
           <div className="bg-slate-700/50 rounded-xl p-4 sm:p-5 mb-5">
+            {todayWOD?.strengthProgramId && activeProgram && (() => {
+              const session = getMySession(todayWOD);
+              return session ? (
+                <div className="mb-3">
+                  <StrengthPartDisplay
+                    program={activeProgram}
+                    session={session}
+                    enrollment={myEnrollment}
+                  />
+                  <div className="border-t border-slate-700 my-3" />
+                  <span className="bg-red-600 text-white px-2 py-0.5 rounded text-xs font-bold">Part B</span>
+                </div>
+              ) : null;
+            })()}
             <div className="space-y-3">
               {(() => { let num = 0; return todayWOD.movements.map((movement, idx) => {
                 if (movement.type === 'header') {

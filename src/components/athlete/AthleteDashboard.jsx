@@ -6,6 +6,7 @@ import { useResults } from '../../hooks/useResults';
 import { useBenchmarkPRs } from '../../hooks/useBenchmarkPRs';
 import { useSocial } from '../../hooks/useSocial';
 import { useBadges } from '../../hooks/useBadges';
+import { useStrengthProgram } from '../../hooks/useStrengthProgram';
 import { calculateStats } from '../../lib/stats';
 import BBoxLogo from '../shared/BBoxLogo';
 import PhotoModal from '../shared/PhotoModal';
@@ -66,6 +67,7 @@ export default function AthleteDashboard() {
 
   const social = useSocial(currentUser);
   const badges = useBadges(currentUser);
+  const strengthProgram = useStrengthProgram(currentUser);
 
   const [currentView, setCurrentView] = useState('dashboard');
 
@@ -90,6 +92,13 @@ export default function AthleteDashboard() {
         loadAllResults(),
         loadAllWODs(),
       ]);
+
+      // Phase 2b: Strength program (depends on wods being loaded)
+      const program = await strengthProgram.loadActiveProgram();
+      await strengthProgram.loadAllPrograms();
+      if (program) {
+        await strengthProgram.loadMyEnrollment(program.id);
+      }
 
       // Phase 3: Depends on results & wods
       await loadMissedWODs(results);
@@ -172,6 +181,13 @@ export default function AthleteDashboard() {
               myBadges={badges.myBadges}
               streakWeeks={badges.streakWeeks}
               showWorkoutSummary={(result) => showWorkoutSummary(result, allWODs)}
+              activeProgram={strengthProgram.activeProgram}
+              programSessions={strengthProgram.programSessions}
+              myEnrollment={strengthProgram.myEnrollment}
+              getMySession={strengthProgram.getMySession}
+              getMyWorkingWeight={strengthProgram.getMyWorkingWeight}
+              onEnroll={(orm) => strengthProgram.enroll(strengthProgram.activeProgram.id, orm)}
+              onUpdateOneRepMax={strengthProgram.updateMyOneRepMax}
             />
           )}
 
@@ -225,6 +241,12 @@ export default function AthleteDashboard() {
           {/* Workout View */}
           {currentView === 'workout' && (
             <AthleteWorkoutView
+              activeProgram={strengthProgram.activeProgram}
+              programSessions={strengthProgram.programSessions}
+              myEnrollment={strengthProgram.myEnrollment}
+              getMySession={strengthProgram.getMySession}
+              getMyWorkingWeight={strengthProgram.getMyWorkingWeight}
+              advanceMySession={strengthProgram.advanceMySession}
               todayWOD={todayWOD}
               myResult={myResult}
               setMyResult={setMyResult}
@@ -244,6 +266,10 @@ export default function AthleteDashboard() {
                 const prs = calculateBenchmarkPRs(results, allWODs);
                 setBenchmarkPRs(prs);
                 await badges.checkAndAwardBadges(results, allWODs, prs);
+                // Advance strength program session if WOD had program attached
+                if (todayWOD?.strengthProgramId && strengthProgram.myEnrollment) {
+                  await strengthProgram.advanceMySession();
+                }
               })}
               logCustomWorkout={() => logCustomWorkout(allWODs, async (results) => {
                 await loadMissedWODs(results);
