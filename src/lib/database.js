@@ -712,7 +712,7 @@ export async function activateProgram(id) {
     .update({ status: 'active' })
     .eq('id', id)
     .select()
-    .single();
+    .maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -723,7 +723,7 @@ export async function deactivateProgram(id) {
     .update({ status: 'completed' })
     .eq('id', id)
     .select()
-    .single();
+    .maybeSingle();
   if (error) throw error;
   return data;
 }
