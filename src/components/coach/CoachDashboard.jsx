@@ -114,30 +114,32 @@ export default function CoachDashboard() {
     const loadData = async () => {
       if (!currentUser) return;
 
-      // Phase 1: Independent queries run in parallel
-      const [wod, wods] = await Promise.all([
+      // Phase 1: Load today's WOD + user results in parallel
+      // These are the minimum needed to show the dashboard
+      const [wod, program] = await Promise.all([
         loadTodayWOD(),
-        loadAllWODs(),
-        loadAllResults(),
         strengthProgram.loadActiveProgram(),
-        strengthProgram.loadAllPrograms(),
       ]);
 
-      // Phase 2: Depends on wod from Phase 1
+      // Phase 2: Load user's results (depends on wod)
       const myResults = await loadMyResults(wod, null);
 
-      // Phase 2b: Depends on activeProgram being loaded
-      if (strengthProgram.activeProgram) {
-        await strengthProgram.loadMyEnrollment(strengthProgram.activeProgram.id);
-      }
-
-      // Phase 3: Depends on results & wods
-      await loadMissedWODs(myResults);
-      const prs = calculateBenchmarkPRs(myResults, wods);
-      setBenchmarkPRs(prs);
+      // Show dashboard immediately — we have enough to render
       setDataLoaded(true);
 
-      // Phase 4: Badges & social (depend on phase 3)
+      // Phase 3: Load remaining data in background (non-blocking)
+      const [wods] = await Promise.all([
+        loadAllWODs(),
+        loadAllResults(),
+        strengthProgram.loadAllPrograms(),
+        program ? strengthProgram.loadMyEnrollment(program.id) : Promise.resolve(),
+        loadMissedWODs(myResults),
+      ]);
+
+      // Phase 4: Calculate PRs + load social (background)
+      const prs = calculateBenchmarkPRs(myResults, wods);
+      setBenchmarkPRs(prs);
+
       const resultIds = myResults.slice(0, 10).map(r => r.id);
       await Promise.all([
         badgesHook.loadMyBadges(),

@@ -83,29 +83,28 @@ export default function AthleteDashboard() {
     const loadData = async () => {
       if (!currentUser) return;
 
-      // Phase 1: Independent queries run in parallel
-      const [wod, wods, , program] = await Promise.all([
+      // Phase 1: Load today's WOD + program (minimum to show dashboard)
+      const [wod, program] = await Promise.all([
         loadTodayWOD(),
-        loadAllWODs(),
-        loadAllResults(),
         strengthProgram.loadActiveProgram(),
-        strengthProgram.loadAllPrograms(),
       ]);
 
-      // Phase 2: Depends on wod from Phase 1
+      // Phase 2: Load user's results (depends on wod)
       const results = await loadMyResults(wod, null);
 
-      // Phase 2b: Depends on activeProgram being loaded
-      if (program) {
-        await strengthProgram.loadMyEnrollment(program.id);
-      }
+      // Phase 3: Load remaining data in background
+      const [wods] = await Promise.all([
+        loadAllWODs(),
+        loadAllResults(),
+        strengthProgram.loadAllPrograms(),
+        program ? strengthProgram.loadMyEnrollment(program.id) : Promise.resolve(),
+        loadMissedWODs(results),
+      ]);
 
-      // Phase 3: Depends on results & wods
-      await loadMissedWODs(results);
+      // Phase 4: Calculate PRs + load social (background)
       const prs = calculateBenchmarkPRs(results, wods);
       setBenchmarkPRs(prs);
 
-      // Phase 4: Badges & social (depend on phase 3)
       const resultIds = results.slice(0, 10).map(r => r.id);
       await Promise.all([
         badges.loadMyBadges(),
