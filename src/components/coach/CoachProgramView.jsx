@@ -417,7 +417,7 @@ export default function CoachProgramView({
                         onClick={() => editWOD(wod)}
                         className="py-3 text-blue-400 hover:bg-slate-700 transition-colors font-medium text-sm"
                       >
-                        Edit
+                        Edit WOD
                       </button>
                       <button
                         onClick={() => deleteWOD(wod)}
