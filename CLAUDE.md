@@ -5,7 +5,7 @@
 BBOX CrossFit is a React-based gym management app for CrossFit boxes. Coaches program WODs (Workouts of the Day) and athletes log their results. Includes social features (reactions, comments, leaderboard), gamification (badges, streaks), and analytics (progress charts, body composition tracking).
 
 **Status:** Production Ready
-**Lines of Code:** ~11,700
+**Lines of Code:** ~13,200 (58 source files)
 **Architecture:** Modular components + custom hooks
 
 ---
@@ -27,11 +27,21 @@ BBOX CrossFit is a React-based gym management app for CrossFit boxes. Coaches pr
 
 ```bash
 # Development
-npm run dev              # Start dev server at localhost:5173
+npm run dev              # Start dev server at localhost:5173 (production DB)
+npx vite --mode test     # Start dev server with test DB (.env.test)
 
 # Production
 npm run build            # Build to dist/
 npm run preview          # Preview production build
+
+# Testing
+npm run test             # Run unit tests (Vitest)
+npm run test:e2e         # Run E2E tests (Playwright, headless)
+npm run test:e2e:headed  # Run E2E tests (visible browser)
+npm run test:all         # Run unit + E2E tests
+npm run test:regression  # Same as test:all with pass/fail summary
+npm run test:seed        # Create test users in test database
+npm run test:cleanup     # Remove test data (preserves users)
 
 # Dependencies
 npm install              # Install all deps
@@ -43,7 +53,8 @@ npm install              # Install all deps
 
 ### Entry Point
 ```
-main.jsx → AuthProvider → App.jsx → CoachDashboard | AthleteDashboard | AuthScreen
+main.jsx → AuthProvider → App.jsx → SplashScreen (while auth initializing)
+                                  → CoachDashboard | AthleteDashboard | AuthScreen
 ```
 
 ### Component Structure
@@ -103,6 +114,9 @@ body_measurements (id, user_id, measured_at, weight_kgs, body_fat_pct, chest_in,
 - **result_reactions:** All authenticated can read, users can only insert/delete own
 - **result_comments:** All authenticated can read, users can only insert/delete own
 - **user_badges:** All authenticated can read, users can only insert own
+- **strength_programs:** All authenticated can read, only coaches can write
+- **program_sessions:** All authenticated can read, only coaches can write
+- **athlete_enrollments:** All authenticated can read, users can only insert/update own
 
 ---
 
@@ -147,7 +161,8 @@ src/
 │   │   ├── AthleteDashboard.jsx    # Athlete shell (tabs, hooks, data loading)
 │   │   ├── AthleteHomeDash.jsx     # Today's WOD, stats, missed WODs, PRs, feed
 │   │   ├── AthleteWorkoutView.jsx  # Log workout / custom workout
-│   │   └── AthleteHistoryView.jsx  # Workout history
+│   │   ├── AthleteHistoryView.jsx  # Workout history
+│   │   └── OneRepMaxPrompt.jsx     # 1RM enrollment/update prompt
 │   │
 │   ├── shared/
 │   │   ├── BBoxLogo.jsx            # App logo
@@ -155,7 +170,8 @@ src/
 │   │   ├── PhotoUpload.jsx         # Photo upload with preview
 │   │   ├── PostWodSummary.jsx      # Post-log summary / workout detail modal
 │   │   ├── DeleteConfirmDialog.jsx # Confirmation dialog
-│   │   └── RxToggle.jsx            # RX / Scaled toggle
+│   │   ├── RxToggle.jsx            # RX / Scaled toggle
+│   │   └── StrengthPartDisplay.jsx # Part A strength program display
 │   │
 │   ├── social/
 │   │   ├── ActivityFeed.jsx        # Recent activity feed
@@ -188,7 +204,9 @@ src/
     ├── stats.js                    # Workout statistics calculation
     └── constants.js                # STANDARD_MOVEMENTS list, getLocalToday()
 
-supabase-schema.sql                 # Database schema with RLS policies
+supabase-schema.sql                 # Database schema (legacy, with migration comments)
+supabase-schema-prod.sql            # Consolidated production schema (authoritative)
+supabase-migration-strength-programs.sql  # Migration script for strength program tables
 ```
 
 ---
@@ -227,6 +245,19 @@ Scores stored as TEXT in `results.time`, with type-aware handling in `score-util
 ### Realtime Subscriptions
 `useLeaderboard` subscribes to Supabase Realtime for live leaderboard updates when results are added/modified.
 
+### Multi-Part WODs (Strength Programs)
+WODs can have a strength program attached as Part A. When `wod.strengthProgramId` is set:
+- Part A displays the strength exercise with sets/reps/percentage and calculated working weight
+- Part B is the regular WOD (movements, score)
+- Results store `strength_score` (Part A) separately from `time` (Part B)
+- When editing a workout, look up the WOD from `allWODs` (the `editingWorkout` is a result object, not a WOD — it has `wodId` but not `strengthProgramId`)
+
+### Progressive Dashboard Loading
+Dashboards render after just `loadTodayWOD()` + `loadMyResults()` (2-3 queries, ~300ms). All other data (allWODs, allResults, badges, social, missed WODs) loads in the background via fire-and-forget `Promise.all().then()`. This prevents the blank screen while heavy queries complete.
+
+### Auth Initialization
+`App.jsx` shows a splash screen (logo + spinner) while `AuthContext` checks for an existing session. This prevents the flash of the login form before auto-redirecting returning users to their dashboard.
+
 ### History Sorting
 All workout history views are sorted by WOD date (latest first), not by logged/created timestamp.
 
@@ -237,6 +268,7 @@ All workout history views are sorted by WOD date (latest first), not by logged/c
 ### Authentication
 - Email/password signup with email confirmation
 - Login with session persistence (auto-refresh tokens)
+- Splash screen during auth initialization (no flash of login form for returning users)
 - Forgot password flow (Supabase sends reset email)
 - Password recovery redirect detection (captures URL hash before Supabase clears it)
 - Auto-logout on session expiration
@@ -342,15 +374,24 @@ Add to `src/index.css` — Tailwind v4 requires explicit utility definitions for
 
 ## Known Issues / Technical Debt
 
-See `IMPLEMENTATION-PLAN.md` for detailed implementation plan.
+See `IMPLEMENTATION-PLAN.md` and `docs/superpowers/plans/` for detailed plans.
 
-### Performance
+### Performance (partially addressed)
+- [x] Query limits added to `getAllResults(100)`, `getAllWods(365)`, `getResultsByAthlete(100)`
+- [x] Progressive dashboard loading (render after 2 queries, background-load rest)
+- [x] Badge caching (5-minute TTL on `getAllUserBadges`)
+- [x] Batch badge awards (single upsert instead of N individual inserts)
+- [x] Parallel athlete WOD lookup (combined + group queries simultaneous)
 - [ ] Photos stored as base64 in database → migrate to Supabase Storage
-- [ ] No pagination → will slow with many results
-- [ ] Full data reload on navigation → add caching
+- [ ] No pagination on history views → add infinite scroll
+- [ ] Full data reload on tab navigation → add caching/memoization
 
 ### Schema
 - [ ] `body_measurements` table not in `supabase-schema.sql` — needs migration added
+
+### Testing
+- [ ] Strength program E2E tests have flaky selectors for session builder form — need `data-testid` attributes
+- [ ] Intermittent athlete-log E2E test timeout — needs retry or longer timeout
 
 ### Missing Features
 - [ ] Push notifications (deferred — requires server-side infrastructure)
@@ -386,12 +427,13 @@ tests/
 ├── unit/
 │   ├── score-utils.test.js    # Score parsing, formatting, comparison (73 tests)
 │   ├── badges.test.js         # Badge checking, streak calculation (35 tests)
-│   └── strength-program.test.js # Weight rounding, working weight calculation (6 tests)
+│   └── strength-program.test.js # Weight rounding, working weight calculation (13 tests)
 ├── e2e/
 │   ├── auth.spec.js           # Login, error handling, signup/forgot forms (6 tests)
 │   ├── coach-wod.spec.js      # Post, view, delete WODs (5 tests)
 │   ├── athlete-log.spec.js    # Log workout, custom workout (4 tests)
-│   └── history.spec.js        # History, athletes, progress views (5 tests)
+│   ├── history.spec.js        # History, athletes, progress views (5 tests)
+│   └── strength-program.spec.js # Program CRUD, enrollment, Part A display (10 tests)
 ├── helpers.js                 # Shared E2E helpers (login, navigate)
 ├── seed.js                    # Create test users
 ├── cleanup.js                 # Remove test data
@@ -430,12 +472,19 @@ tests/
 2. Connect repo to Vercel
 3. Auto-deploys on push to main
 
+### Pre-push Hook
+A git pre-push hook runs the full regression suite (unit + E2E) before every push. Skip with `git push --no-verify` if needed.
+
 ### Supabase Setup
 1. Create Supabase project
-2. Run `supabase-schema.sql` in SQL Editor
-3. Set env vars `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-4. Enable Realtime on `results` table (for leaderboard)
-5. Disable email confirmation in Auth settings (or configure SMTP)
+2. Run `supabase-schema-prod.sql` in SQL Editor (authoritative schema)
+3. Run `supabase-migration-strength-programs.sql` for strength program tables (if not in base schema)
+4. Set env vars `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+5. Enable Realtime on `results` table (for leaderboard): `ALTER PUBLICATION supabase_realtime ADD TABLE results;`
+6. Disable email confirmation in Auth settings (or configure SMTP)
+
+### Test Supabase Project
+A separate Supabase project is used for E2E testing. Credentials in `.env.test` (gitignored). Run the same schema + migration scripts on the test project. Test users created by `npm run test:seed`.
 
 ---
 
@@ -463,6 +512,10 @@ tests/
 6. **RLS:** Supabase Row Level Security handles authorization
 7. **Score types:** Use `score-utils.js` for all score parsing/formatting/comparison
 8. **Benchmark validation:** Custom workouts cannot use benchmark WOD names
+9. **Use `.maybeSingle()`** not `.single()` for queries that might return 0 rows (prevents "Cannot coerce" errors)
+10. **Editing workout:** `editingWorkout` is a result object — look up WOD via `allWODs.find(w => w.id === editingWorkout.wodId)` to get `strengthProgramId`
+11. **Progressive loading:** Dashboard renders after todayWOD + myResults; don't block render waiting for badges, social, or allResults
+12. **camelCase in hooks/components, snake_case in database.js insert objects:** Format transformers bridge the gap
 
 ---
 
@@ -470,7 +523,9 @@ tests/
 
 | File | Purpose |
 |------|---------|
-| `supabase-schema.sql` | Database schema with RLS policies |
+| `supabase-schema-prod.sql` | Authoritative database schema (use for new projects) |
+| `supabase-schema.sql` | Legacy schema with migration comments |
+| `supabase-migration-strength-programs.sql` | Idempotent migration for strength program tables |
 | `src/lib/database.js` | All database CRUD + format transformers |
 | `src/lib/supabase.js` | Supabase client + recovery detection |
 | `src/lib/score-utils.js` | Score parsing, formatting, comparison |
@@ -478,4 +533,7 @@ tests/
 | `src/lib/benchmarks.js` | 46 benchmark WOD definitions |
 | `src/lib/constants.js` | Movement list, date helpers |
 | `src/lib/stats.js` | Workout statistics |
-| `src/contexts/AuthContext.jsx` | Auth state provider |
+| `src/contexts/AuthContext.jsx` | Auth state provider (includes authInitializing) |
+| `src/hooks/useStrengthProgram.js` | Strength program CRUD, enrollment, weight calculation |
+| `vitest.config.js` | Unit test configuration |
+| `playwright.config.js` | E2E test configuration (port 5174, Pixel 5 viewport) |
