@@ -109,47 +109,43 @@ export default function CoachDashboard() {
 
   const [dataLoaded, setDataLoaded] = useState(false);
 
-  // Load data on mount
+  // Load data on mount — progressive loading for fast first render
   useEffect(() => {
     const loadData = async () => {
       if (!currentUser) return;
 
-      // Phase 1: Load today's WOD + user results in parallel
-      // These are the minimum needed to show the dashboard
+      // Phase 1: Minimum to render (2 parallel queries ~200ms)
       const [wod, program] = await Promise.all([
         loadTodayWOD(),
         strengthProgram.loadActiveProgram(),
       ]);
 
-      // Phase 2: Load user's results (depends on wod)
+      // Phase 2: Today's result (1 query ~100ms)
       const myResults = await loadMyResults(wod, null);
 
-      // Show dashboard immediately — we have enough to render
+      // Render dashboard NOW — user sees today's WOD + their result
       setDataLoaded(true);
 
-      // Phase 3: Load remaining data in background (non-blocking)
-      const [wods] = await Promise.all([
+      // Phase 3: Everything else in background (non-blocking, fire-and-forget)
+      // User can already see and interact with the dashboard
+      Promise.all([
         loadAllWODs(),
         loadAllResults(),
         strengthProgram.loadAllPrograms(),
         program ? strengthProgram.loadMyEnrollment(program.id) : Promise.resolve(),
         loadMissedWODs(myResults),
-      ]);
-
-      // Phase 4: Calculate PRs + load social (background)
-      const prs = calculateBenchmarkPRs(myResults, wods);
-      setBenchmarkPRs(prs);
-
-      const resultIds = myResults.slice(0, 10).map(r => r.id);
-      await Promise.all([
         badgesHook.loadMyBadges(),
         badgesHook.loadAllUserBadges(),
-        badgesHook.checkAndAwardBadges(myResults, wods, prs),
-        ...(resultIds.length > 0 ? [
-          social.loadReactionsForResults(resultIds),
-          social.loadCommentsForResults(resultIds),
-        ] : []),
-      ]);
+      ]).then(async ([wods]) => {
+        const prs = calculateBenchmarkPRs(myResults, wods);
+        setBenchmarkPRs(prs);
+        await badgesHook.checkAndAwardBadges(myResults, wods, prs);
+        const resultIds = myResults.slice(0, 10).map(r => r.id);
+        if (resultIds.length > 0) {
+          social.loadReactionsForResults(resultIds);
+          social.loadCommentsForResults(resultIds);
+        }
+      });
     };
     loadData();
   }, [currentUser]);

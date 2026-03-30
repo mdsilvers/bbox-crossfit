@@ -103,14 +103,13 @@ export async function getTodayWod(userGroup, role) {
     return data;
   }
 
-  // Athletes: try combined first, then their specific group
-  let wod = await getWodByDateAndGroup(today, 'combined');
-
-  if (!wod && userGroup) {
-    wod = await getWodByDateAndGroup(today, userGroup);
+  // Athletes: check combined and group-specific in parallel
+  const queries = [getWodByDateAndGroup(today, 'combined')];
+  if (userGroup) {
+    queries.push(getWodByDateAndGroup(today, userGroup));
   }
-
-  return wod;
+  const results = await Promise.all(queries);
+  return results[0] || results[1] || null;
 }
 
 export async function getAllWods(limit = 365) {
@@ -261,12 +260,13 @@ export async function checkWodConflict(date, group, excludeId = null) {
 
 // ==================== RESULTS FUNCTIONS ====================
 
-export async function getResultsByAthlete(athleteId) {
+export async function getResultsByAthlete(athleteId, limit = 100) {
   const { data, error } = await supabase
     .from('results')
     .select('*')
     .eq('athlete_id', athleteId)
-    .order('date', { ascending: false });
+    .order('date', { ascending: false })
+    .limit(limit);
 
   if (error) throw error;
   return data || [];

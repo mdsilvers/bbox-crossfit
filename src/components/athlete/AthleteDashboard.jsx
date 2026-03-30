@@ -83,37 +83,33 @@ export default function AthleteDashboard() {
     const loadData = async () => {
       if (!currentUser) return;
 
-      // Phase 1: Load today's WOD + program (minimum to show dashboard)
+      // Phase 1: Minimum to render (2 parallel queries ~200ms)
       const [wod, program] = await Promise.all([
         loadTodayWOD(),
         strengthProgram.loadActiveProgram(),
       ]);
 
-      // Phase 2: Load user's results (depends on wod)
+      // Phase 2: Today's result (1 query ~100ms)
       const results = await loadMyResults(wod, null);
 
-      // Phase 3: Load remaining data in background
-      const [wods] = await Promise.all([
+      // Phase 3: Everything else in background (non-blocking)
+      Promise.all([
         loadAllWODs(),
         loadAllResults(),
         strengthProgram.loadAllPrograms(),
         program ? strengthProgram.loadMyEnrollment(program.id) : Promise.resolve(),
         loadMissedWODs(results),
-      ]);
-
-      // Phase 4: Calculate PRs + load social (background)
-      const prs = calculateBenchmarkPRs(results, wods);
-      setBenchmarkPRs(prs);
-
-      const resultIds = results.slice(0, 10).map(r => r.id);
-      await Promise.all([
         badges.loadMyBadges(),
-        badges.checkAndAwardBadges(results, wods, prs),
-        ...(resultIds.length > 0 ? [
-          social.loadReactionsForResults(resultIds),
-          social.loadCommentsForResults(resultIds),
-        ] : []),
-      ]);
+      ]).then(async ([wods]) => {
+        const prs = calculateBenchmarkPRs(results, wods);
+        setBenchmarkPRs(prs);
+        await badges.checkAndAwardBadges(results, wods, prs);
+        const resultIds = results.slice(0, 10).map(r => r.id);
+        if (resultIds.length > 0) {
+          social.loadReactionsForResults(resultIds);
+          social.loadCommentsForResults(resultIds);
+        }
+      });
     };
     loadData();
   }, [currentUser]);
