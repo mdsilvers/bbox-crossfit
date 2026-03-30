@@ -103,7 +103,10 @@ export default function AthleteWorkoutView({
           </div>
 
           {(() => {
-            const currentWod = editingWorkout || todayWOD;
+            // When editing, look up the WOD to get strengthProgramId (result objects don't have it)
+            const currentWod = editingWorkout
+              ? (allWODs?.find(w => w.id === editingWorkout.wodId) || editingWorkout)
+              : todayWOD;
             if (!currentWod?.strengthProgramId || !activeProgram) return null;
             const session = getMySession(currentWod);
             if (!session) return null;
