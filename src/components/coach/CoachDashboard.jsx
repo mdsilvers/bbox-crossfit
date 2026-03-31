@@ -163,6 +163,11 @@ export default function CoachDashboard() {
     const prs = calculateBenchmarkPRs(freshResults, allWODs);
     setBenchmarkPRs(prs);
     await badgesHook.checkAndAwardBadges(freshResults, allWODs, prs);
+    // Advance strength program session if WOD had program attached
+    if (todayWOD?.strengthProgramId && strengthProgram.myEnrollment) {
+      await strengthProgram.advanceMySession();
+      await strengthProgram.loadMyEnrollment(strengthProgram.activeProgram?.id);
+    }
   };
 
   // Callback after custom workout logging
