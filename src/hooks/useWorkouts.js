@@ -162,7 +162,7 @@ export function useWorkouts(currentUser) {
     }
   };
 
-  const editWOD = (wod, navigate) => {
+  const editWOD = async (wod, navigate) => {
     setEditingWOD(wod);
     setNewWOD({
       name: wod.name || '',
@@ -172,7 +172,16 @@ export function useWorkouts(currentUser) {
       movements: wod.movements,
       notes: wod.notes
     });
-    setWodPhotoData(wod.photoData || null);
+    // Photo stripped from list query — fetch on demand so it isn't lost on save.
+    let photoData = wod.photoData;
+    if (!photoData && wod.hasPhoto) {
+      try {
+        photoData = await db.getWodPhoto(wod.id);
+      } catch (error) {
+        console.error('Error fetching WOD photo:', error);
+      }
+    }
+    setWodPhotoData(photoData || null);
     setMovementInput(wod.movements.map(m => m.name));
     setShowMovementDropdown(wod.movements.map(() => false));
     if (wod.postedById) {

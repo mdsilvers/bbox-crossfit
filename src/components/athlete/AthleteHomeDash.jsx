@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Dumbbell, Clock, Calendar, Trophy } from 'lucide-react';
 import OneRepMaxPrompt from './OneRepMaxPrompt';
 import StrengthPartDisplay from '../shared/StrengthPartDisplay';
+import LazyPhoto from '../shared/LazyPhoto';
 import { formatScore, getScoreLabel } from '../../lib/score-utils';
 import { isBenchmarkWod } from '../../lib/benchmarks';
 import { getLocalToday } from '../../lib/constants';
@@ -628,15 +629,15 @@ export default function AthleteHomeDash({
                           onDelete={onDeleteComment}
                         />
 
-                        {result.photoData && (
-                          <div
-                            className="mt-3 -mx-4 -mb-4 cursor-pointer"
-                            onClick={() => setPhotoModalUrl(result.photoData)}
-                          >
-                            <img
-                              src={result.photoData}
-                              alt="Workout"
-                              className="w-full h-32 object-cover hover:opacity-90 transition-opacity"
+                        {(result.hasPhoto || result.photoData) && (
+                          <div className="mt-3 -mx-4 -mb-4">
+                            <LazyPhoto
+                              table="results"
+                              id={result.id}
+                              hasPhoto={result.hasPhoto}
+                              photoData={result.photoData}
+                              onOpen={setPhotoModalUrl}
+                              className="w-full h-32"
                             />
                           </div>
                         )}

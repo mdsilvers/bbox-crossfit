@@ -1,6 +1,7 @@
 import React from 'react';
 import { Plus, Trash2, Dumbbell, Calendar, Users, Image, GripVertical } from 'lucide-react';
 import StrengthProgramManager from './StrengthProgramManager';
+import LazyPhoto from '../shared/LazyPhoto';
 import { isBenchmarkWod, getBenchmarkByName, getBenchmarksByCategory } from '../../lib/benchmarks';
 import { STANDARD_MOVEMENTS, getLocalToday } from '../../lib/constants';
 import {
@@ -394,11 +395,13 @@ export default function CoachProgramView({
                       )}
 
                       {/* WOD Board Photo */}
-                      {wod.photoData && (
-                        <img
-                          src={wod.photoData}
-                          alt="WOD Board"
-                          className="w-full rounded h-32 object-cover mb-3"
+                      {(wod.hasPhoto || wod.photoData) && (
+                        <LazyPhoto
+                          table="wods"
+                          id={wod.id}
+                          hasPhoto={wod.hasPhoto}
+                          photoData={wod.photoData}
+                          className="w-full h-32 mb-3"
                         />
                       )}
 

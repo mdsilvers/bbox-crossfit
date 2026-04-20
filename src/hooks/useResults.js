@@ -3,6 +3,22 @@ import * as db from '../lib/database';
 import { isBenchmarkWod, getBenchmarkByName } from '../lib/benchmarks';
 import { STANDARD_MOVEMENTS, getLocalToday } from '../lib/constants';
 
+// Upsert a result into a sorted-by-date-desc list, replacing any existing
+// entry with the same id OR the same (athleteId, date) pair — the DB has
+// a UNIQUE (athlete_id, date) constraint, so both keys identify the same row.
+function upsertResult(list, saved) {
+  const filtered = list.filter(r =>
+    r.id !== saved.id && !(r.athleteId === saved.athleteId && r.date === saved.date)
+  );
+  const next = [saved, ...filtered];
+  next.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  return next;
+}
+
+function removeResult(list, id) {
+  return list.filter(r => r.id !== id);
+}
+
 export function useResults(currentUser) {
   const [workoutResults, setWorkoutResults] = useState([]);
   const [allAthleteResults, setAllAthleteResults] = useState([]);
@@ -57,11 +73,16 @@ export function useResults(currentUser) {
         const matchesCurrentWod = isCustom || !currentWOD || todayResult.wodId === currentWOD.id;
 
         if (matchesCurrentWod) {
+          // Photo was stripped from the list query — fetch so the form can keep it.
+          let photoData = todayResult.photoData;
+          if (!photoData && todayResult.hasPhoto) {
+            try { photoData = await db.getResultPhoto(todayResult.id); } catch { /* non-fatal */ }
+          }
           setMyResult({
             time: todayResult.time,
             movements: todayResult.movements,
             notes: todayResult.notes,
-            photoData: todayResult.photoData,
+            photoData,
             rx: todayResult.rx ?? 'rx',
             strengthScore: todayResult.strengthScore || '',
             existingResultId: todayResult.id,
@@ -150,10 +171,29 @@ export function useResults(currentUser) {
         mode: 'post-log',
       });
 
-      const results = await loadMyResults();
-      await loadAllResults();
+      const updatedMyResults = upsertResult(workoutResults, savedResult);
+      setWorkoutResults(updatedMyResults);
+      setAllAthleteResults(prev => upsertResult(prev, savedResult));
 
-      if (onSuccess) await onSuccess(results);
+      // Mirror loadMyResults' form-reset side effect so the next render reflects today's saved result
+      const today = getLocalToday();
+      if (savedResult.date === today) {
+        const isCustom = !!(savedResult.customWodName || savedResult.customWodType);
+        setMyResult({
+          time: savedResult.time,
+          movements: savedResult.movements,
+          notes: savedResult.notes,
+          photoData: savedResult.photoData,
+          rx: savedResult.rx ?? 'rx',
+          strengthScore: savedResult.strengthScore || '',
+          existingResultId: savedResult.id,
+          isCustomResult: isCustom,
+          customWodName: savedResult.customWodName,
+          customWodType: savedResult.customWodType,
+        });
+      }
+
+      if (onSuccess) await onSuccess(updatedMyResults);
 
       if (editingWorkout) {
         setEditingWorkout(null);
@@ -209,10 +249,27 @@ export function useResults(currentUser) {
         mode: 'post-log',
       });
 
-      const results = await loadMyResults();
-      await loadAllResults();
+      const updatedMyResults = upsertResult(workoutResults, savedResult);
+      setWorkoutResults(updatedMyResults);
+      setAllAthleteResults(prev => upsertResult(prev, savedResult));
 
-      if (onSuccess) await onSuccess(results);
+      // Mirror loadMyResults' form-reset side effect
+      if (savedResult.date === today) {
+        setMyResult({
+          time: savedResult.time,
+          movements: savedResult.movements,
+          notes: savedResult.notes,
+          photoData: savedResult.photoData,
+          rx: savedResult.rx ?? 'rx',
+          strengthScore: savedResult.strengthScore || '',
+          existingResultId: savedResult.id,
+          isCustomResult: true,
+          customWodName: savedResult.customWodName,
+          customWodType: savedResult.customWodType,
+        });
+      }
+
+      if (onSuccess) await onSuccess(updatedMyResults);
 
       setIsCustomWorkout(false);
       setCustomWod({
@@ -278,13 +335,22 @@ export function useResults(currentUser) {
     if (navigate) navigate('dashboard');
   };
 
-  const editPastWorkout = (result, navigate) => {
+  const editPastWorkout = async (result, navigate) => {
     setEditingWorkout(result);
+    // Photo was stripped from the list query — fetch on demand so it isn't lost on save.
+    let photoData = result.photoData;
+    if (!photoData && result.hasPhoto) {
+      try {
+        photoData = await db.getResultPhoto(result.id);
+      } catch (error) {
+        console.error('Error fetching result photo:', error);
+      }
+    }
     setMyResult({
       time: result.time,
       movements: result.movements,
       notes: result.notes,
-      photoData: result.photoData,
+      photoData,
       rx: result.rx ?? 'rx',
       strengthScore: result.strengthScore || '',
       existingResultId: result.id
@@ -295,8 +361,20 @@ export function useResults(currentUser) {
   const deleteWorkout = async (workoutId) => {
     try {
       await db.deleteResult(workoutId);
-      await loadMyResults();
-      await loadAllResults();
+      setWorkoutResults(prev => removeResult(prev, workoutId));
+      setAllAthleteResults(prev => removeResult(prev, workoutId));
+
+      // If we just deleted today's result, reset the form so the user can log again.
+      if (myResult.existingResultId === workoutId) {
+        setMyResult({
+          time: '',
+          movements: [],
+          notes: '',
+          photoData: null,
+          rx: 'rx',
+          strengthScore: '',
+        });
+      }
       setShowDeleteConfirm(null);
     } catch (error) {
       alert('Error deleting workout: ' + error.message);

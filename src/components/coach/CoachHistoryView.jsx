@@ -5,6 +5,7 @@ import { isBenchmarkWod } from '../../lib/benchmarks';
 import ReactionBar from '../social/ReactionBar';
 import CommentThread from '../social/CommentThread';
 import StrengthPartDisplay from '../shared/StrengthPartDisplay';
+import LazyPhoto from '../shared/LazyPhoto';
 
 export default function CoachHistoryView({
   workoutResults,
@@ -249,15 +250,16 @@ export default function CoachHistoryView({
                         onDelete={onDeleteComment}
                       />
 
-                      {result.photoData && (
-                        <div
-                          className="mt-3 -mx-4 -mb-4 cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPhotoModalUrl(result.photoData);
-                          }}
-                        >
-                          <img src={result.photoData} alt="Workout" className="w-full h-32 object-cover hover:opacity-90 transition-opacity" />
+                      {(result.hasPhoto || result.photoData) && (
+                        <div className="mt-3 -mx-4 -mb-4">
+                          <LazyPhoto
+                            table="results"
+                            id={result.id}
+                            hasPhoto={result.hasPhoto}
+                            photoData={result.photoData}
+                            onOpen={setPhotoModalUrl}
+                            className="w-full h-32"
+                          />
                         </div>
                       )}
                     </div>

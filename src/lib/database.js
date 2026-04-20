@@ -1,6 +1,13 @@
 import { supabase } from './supabase';
 import { getLocalToday } from './constants';
 
+// Explicit column lists for list queries — omits `photo_url` (base64, MBs per row).
+// `has_photo` is a generated column (see supabase-migration-photo-optimization.sql)
+// that lets the UI know whether to render a lazy-load thumbnail.
+// Single-row queries continue to select('*') so the viewer / edit form gets photo_url.
+const WOD_LIST_COLUMNS = 'id, name, date, type, group_type, movements, notes, posted_by, posted_by_name, strength_program_id, program_session_override, has_photo, created_at, updated_at';
+const RESULT_LIST_COLUMNS = 'id, wod_id, athlete_id, athlete_name, athlete_email, date, time, movements, notes, custom_wod_name, custom_wod_type, rx, strength_score, has_photo, created_at, updated_at';
+
 // ==================== AUTH FUNCTIONS ====================
 
 export async function signUp(email, password, name, role, group) {
@@ -115,7 +122,7 @@ export async function getTodayWod(userGroup, role) {
 export async function getAllWods(limit = 365) {
   const { data, error } = await supabase
     .from('wods')
-    .select('*')
+    .select(WOD_LIST_COLUMNS)
     .order('date', { ascending: false })
     .limit(limit);
 
@@ -132,7 +139,7 @@ export async function getRecentWods(userGroup, daysBack = 7) {
   // Get WODs that match user's group or combined, excluding today
   const { data, error } = await supabase
     .from('wods')
-    .select('*')
+    .select(WOD_LIST_COLUMNS)
     .gte('date', startDateStr)
     .lt('date', todayStr)
     .or(`group_type.eq.combined,group_type.eq.${userGroup}`)
@@ -140,6 +147,16 @@ export async function getRecentWods(userGroup, daysBack = 7) {
 
   if (error) throw error;
   return data || [];
+}
+
+export async function getWodPhoto(id) {
+  const { data, error } = await supabase
+    .from('wods')
+    .select('photo_url')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.photo_url || null;
 }
 
 export async function createWod(wod, userId, userName) {
@@ -263,7 +280,7 @@ export async function checkWodConflict(date, group, excludeId = null) {
 export async function getResultsByAthlete(athleteId, limit = 100) {
   const { data, error } = await supabase
     .from('results')
-    .select('*')
+    .select(RESULT_LIST_COLUMNS)
     .eq('athlete_id', athleteId)
     .order('date', { ascending: false })
     .limit(limit);
@@ -275,12 +292,22 @@ export async function getResultsByAthlete(athleteId, limit = 100) {
 export async function getAllResults(limit = 100) {
   const { data, error } = await supabase
     .from('results')
-    .select('*')
+    .select(RESULT_LIST_COLUMNS)
     .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) throw error;
   return data || [];
+}
+
+export async function getResultPhoto(id) {
+  const { data, error } = await supabase
+    .from('results')
+    .select('photo_url')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.photo_url || null;
 }
 
 export async function getResultByAthleteAndDate(athleteId, date) {
@@ -354,7 +381,7 @@ export async function deleteResult(id) {
 export async function getResultsForDate(date) {
   const { data, error } = await supabase
     .from('results')
-    .select('*')
+    .select(RESULT_LIST_COLUMNS)
     .eq('date', date);
 
   if (error) throw error;
@@ -369,7 +396,7 @@ export async function getAllResultsForBenchmark(wodIds) {
 
   const { data, error } = await supabase
     .from('results')
-    .select('*')
+    .select(RESULT_LIST_COLUMNS)
     .in('wod_id', wodIds)
     .order('date', { ascending: false });
 
@@ -452,7 +479,7 @@ export async function deleteBodyMeasurement(id) {
 export async function getLeaderboardForDate(date, wodId) {
   let query = supabase
     .from('results')
-    .select('*, profiles!athlete_id(group_type)')
+    .select(`${RESULT_LIST_COLUMNS}, profiles!athlete_id(group_type)`)
     .eq('date', date);
 
   if (wodId) {
@@ -860,7 +887,9 @@ export function profileToUser(profile) {
   };
 }
 
-// Transform Supabase WOD to app WOD format
+// Transform Supabase WOD to app WOD format.
+// `photoData` is populated on single-row queries (select * on getTodayWod etc.)
+// but omitted on list queries; `hasPhoto` is always populated (generated column).
 export function wodToAppFormat(wod) {
   if (!wod) return null;
   return {
@@ -871,7 +900,8 @@ export function wodToAppFormat(wod) {
     group: wod.group_type,
     movements: wod.movements,
     notes: wod.notes,
-    photoData: wod.photo_url,
+    photoData: wod.photo_url ?? null,
+    hasPhoto: wod.has_photo ?? !!wod.photo_url,
     postedById: wod.posted_by,
     postedBy: wod.posted_by_name,
     postedAt: wod.created_at,
@@ -880,7 +910,8 @@ export function wodToAppFormat(wod) {
   };
 }
 
-// Transform Supabase result to app result format
+// Transform Supabase result to app result format.
+// See wodToAppFormat for photoData/hasPhoto semantics.
 export function resultToAppFormat(result) {
   if (!result) return null;
   return {
@@ -893,7 +924,8 @@ export function resultToAppFormat(result) {
     time: result.time,
     movements: result.movements,
     notes: result.notes,
-    photoData: result.photo_url,
+    photoData: result.photo_url ?? null,
+    hasPhoto: result.has_photo ?? !!result.photo_url,
     customWodName: result.custom_wod_name,
     customWodType: result.custom_wod_type,
     rx: result.rx ?? 'rx',

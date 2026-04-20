@@ -666,7 +666,7 @@ export default function CoachHomeDash({
                           />
 
                           {/* Photo indicator */}
-                          {result.photoData && (
+                          {(result.hasPhoto || result.photoData) && (
                             <div className="mt-2 flex items-center gap-1 text-slate-400 text-xs">
                               <Image className="w-3 h-3" />
                               <span>Photo attached</span>

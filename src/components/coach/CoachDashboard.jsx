@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { LogOut, Clock, Calendar, Users, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkouts } from '../../hooks/useWorkouts';
@@ -17,9 +17,21 @@ import ActivityFeed from '../social/ActivityFeed';
 import CoachHomeDash from './CoachHomeDash';
 import CoachHistoryView from './CoachHistoryView';
 import CoachWorkoutView from './CoachWorkoutView';
-import CoachProgramView from './CoachProgramView';
 import CoachAthleteList from './CoachAthleteList';
-import ProgressDashboard from '../ProgressDashboard';
+
+const CoachProgramView = lazy(() => import('./CoachProgramView'));
+const ProgressDashboard = lazy(() => import('../ProgressDashboard'));
+
+function LazyTabFallback() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <svg className="animate-spin h-6 w-6 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    </div>
+  );
+}
 
 export default function CoachDashboard() {
   const { currentUser, handleLogout } = useAuth();
@@ -99,13 +111,13 @@ export default function CoachDashboard() {
   } = results;
 
   // Navigation function passed to children and hook callbacks
-  const navigate = (view) => {
+  const navigate = useCallback((view) => {
     // Clear stale editing state when leaving the workout form
     if (view !== 'workout') {
       setEditingWorkout(null);
     }
     setCoachView(view);
-  };
+  }, [setEditingWorkout]);
 
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -127,7 +139,8 @@ export default function CoachDashboard() {
       setDataLoaded(true);
 
       // Phase 3: Everything else in background (non-blocking, fire-and-forget)
-      // User can already see and interact with the dashboard
+      // User can already see and interact with the dashboard.
+      // loadAllUserBadges deferred to athletes tab open (only needed there).
       Promise.all([
         loadAllWODs(),
         loadAllResults(),
@@ -135,7 +148,6 @@ export default function CoachDashboard() {
         program ? strengthProgram.loadMyEnrollment(program.id) : Promise.resolve(),
         loadMissedWODs(myResults),
         badgesHook.loadMyBadges(),
-        badgesHook.loadAllUserBadges(),
       ]).then(async ([wods]) => {
         const prs = calculateBenchmarkPRs(myResults, wods);
         setBenchmarkPRs(prs);
@@ -150,7 +162,18 @@ export default function CoachDashboard() {
     loadData();
   }, [currentUser]);
 
-  const stats = calculateStats(workoutResults, currentUser);
+  // Lazy-load Athletes-tab data (badge list for all users) on first visit.
+  const [athletesTabLoaded, setAthletesTabLoaded] = useState(false);
+  useEffect(() => {
+    if (!currentUser || athletesTabLoaded || coachView !== 'athletes') return;
+    badgesHook.loadAllUserBadges();
+    setAthletesTabLoaded(true);
+  }, [coachView, currentUser, athletesTabLoaded]);
+
+  const stats = useMemo(
+    () => calculateStats(workoutResults, currentUser),
+    [workoutResults, currentUser]
+  );
 
   // Wrapper for logout that resets app-level state
   const onLogout = async () => {
@@ -318,6 +341,7 @@ export default function CoachDashboard() {
 
           {/* Program View */}
           {coachView === 'program' && (
+            <Suspense fallback={<LazyTabFallback />}>
             <CoachProgramView
               currentUser={currentUser}
               allWODs={allWODs}
@@ -359,16 +383,19 @@ export default function CoachDashboard() {
               setSelectedCoach={setSelectedCoach}
               strengthProgram={strengthProgram}
             />
+            </Suspense>
           )}
 
           {/* Progress View */}
           {coachView === 'progress' && (
-            <ProgressDashboard
-              currentUser={currentUser}
-              workoutResults={workoutResults}
-              allAthleteResults={allAthleteResults}
-              allWODs={allWODs}
-            />
+            <Suspense fallback={<LazyTabFallback />}>
+              <ProgressDashboard
+                currentUser={currentUser}
+                workoutResults={workoutResults}
+                allAthleteResults={allAthleteResults}
+                allWODs={allWODs}
+              />
+            </Suspense>
           )}
 
           {/* Athletes View */}

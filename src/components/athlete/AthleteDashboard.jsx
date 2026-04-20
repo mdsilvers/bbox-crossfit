@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { LogOut, Clock, TrendingUp } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkouts } from '../../hooks/useWorkouts';
@@ -13,11 +13,23 @@ import PhotoModal from '../shared/PhotoModal';
 import PostWodSummary from '../shared/PostWodSummary';
 import BadgeToast from '../social/BadgeToast';
 import BadgeIcons from '../social/BadgeIcons';
-import ProgressDashboard from '../ProgressDashboard';
 import ActivityFeed from '../social/ActivityFeed';
 import AthleteHomeDash from './AthleteHomeDash';
 import AthleteHistoryView from './AthleteHistoryView';
 import AthleteWorkoutView from './AthleteWorkoutView';
+
+const ProgressDashboard = lazy(() => import('../ProgressDashboard'));
+
+function LazyTabFallback() {
+  return (
+    <div className="flex items-center justify-center py-20">
+      <svg className="animate-spin h-6 w-6 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+      </svg>
+    </div>
+  );
+}
 
 export default function AthleteDashboard() {
   const { currentUser, handleLogout } = useAuth();
@@ -71,12 +83,12 @@ export default function AthleteDashboard() {
 
   const [currentView, setCurrentView] = useState('dashboard');
 
-  const navigate = (view) => {
+  const navigate = useCallback((view) => {
     if (view !== 'workout') {
       setEditingWorkout(null);
     }
     setCurrentView(view);
-  };
+  }, [setEditingWorkout]);
 
   // Data loading
   useEffect(() => {
@@ -92,11 +104,11 @@ export default function AthleteDashboard() {
       // Phase 2: Today's result (1 query ~100ms)
       const results = await loadMyResults(wod, null);
 
-      // Phase 3: Everything else in background (non-blocking)
+      // Phase 3: Everything else in background (non-blocking).
+      // Athletes don't need the full programs list — active program + enrollment is enough.
       Promise.all([
         loadAllWODs(),
         loadAllResults(),
-        strengthProgram.loadAllPrograms(),
         program ? strengthProgram.loadMyEnrollment(program.id) : Promise.resolve(),
         loadMissedWODs(results),
         badges.loadMyBadges(),
@@ -118,7 +130,10 @@ export default function AthleteDashboard() {
     await handleLogout();
   };
 
-  const stats = calculateStats(workoutResults, currentUser);
+  const stats = useMemo(
+    () => calculateStats(workoutResults, currentUser),
+    [workoutResults, currentUser]
+  );
 
   return (
     <div className="min-h-screen min-h-dvh bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -217,12 +232,14 @@ export default function AthleteDashboard() {
 
           {/* Progress View */}
           {currentView === 'progress' && (
-            <ProgressDashboard
-              currentUser={currentUser}
-              workoutResults={workoutResults}
-              allAthleteResults={allAthleteResults}
-              allWODs={allWODs}
-            />
+            <Suspense fallback={<LazyTabFallback />}>
+              <ProgressDashboard
+                currentUser={currentUser}
+                workoutResults={workoutResults}
+                allAthleteResults={allAthleteResults}
+                allWODs={allWODs}
+              />
+            </Suspense>
           )}
 
           {/* Activity Feed View */}

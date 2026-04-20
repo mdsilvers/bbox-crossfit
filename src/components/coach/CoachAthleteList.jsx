@@ -5,6 +5,7 @@ import { isBenchmarkWod } from '../../lib/benchmarks';
 import ReactionBar from '../social/ReactionBar';
 import CommentThread from '../social/CommentThread';
 import BadgeIcons from '../social/BadgeIcons';
+import LazyPhoto from '../shared/LazyPhoto';
 
 export default function CoachAthleteList({
   allAthleteResults,
@@ -231,12 +232,14 @@ export default function CoachAthleteList({
                             </div>
 
                             {/* Photo thumbnail */}
-                            {workout.photoData && (
-                              <img
-                                src={workout.photoData}
-                                alt="Workout"
-                                className="w-full rounded h-32 object-cover mb-2 cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={(e) => { e.stopPropagation(); setPhotoModalUrl(workout.photoData); }}
+                            {(workout.hasPhoto || workout.photoData) && (
+                              <LazyPhoto
+                                table="results"
+                                id={workout.id}
+                                hasPhoto={workout.hasPhoto}
+                                photoData={workout.photoData}
+                                onOpen={setPhotoModalUrl}
+                                className="w-full h-32 mb-2"
                               />
                             )}
 
