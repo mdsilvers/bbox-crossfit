@@ -1,0 +1,8 @@
+---
+description: Project conventions
+alwaysApply: true
+---
+
+Follow the conventions in @AGENTS.md at the repo root.
+
+Also follow my global conventions: ~/dev-config/global/AGENTS.md
