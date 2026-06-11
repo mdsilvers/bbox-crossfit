@@ -266,7 +266,7 @@ All workout history views are sorted by WOD date (latest first), not by logged/c
 ## Features
 
 ### Authentication
-- Email/password signup with email confirmation
+- Email/password signup with email confirmation (always creates an athlete — coach role is granted manually via SQL; the signup trigger ignores client-supplied roles)
 - Login with session persistence (auto-refresh tokens)
 - Splash screen during auth initialization (no flash of login form for returning users)
 - Forgot password flow (Supabase sends reset email)
@@ -477,11 +477,13 @@ A git pre-push hook runs the full regression suite (unit + E2E) before every pus
 
 ### Supabase Setup
 1. Create Supabase project
-2. Run `supabase-schema-prod.sql` in SQL Editor (authoritative schema)
+2. Run `supabase-schema-prod.sql` in SQL Editor (authoritative schema — includes `has_photo` generated columns, the one-active-program unique index, and the comment-author trigger)
 3. Run `supabase-migration-strength-programs.sql` for strength program tables (if not in base schema)
-4. Set env vars `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-5. Enable Realtime on `results` table (for leaderboard): `ALTER PUBLICATION supabase_realtime ADD TABLE results;`
-6. Disable email confirmation in Auth settings (or configure SMTP)
+4. On EXISTING projects also run `supabase-migration-photo-optimization.sql` and `supabase-migration-2026-06-audit-fixes.sql` (both idempotent)
+5. Set env vars `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+6. Enable Realtime on `results` table (for leaderboard): `ALTER PUBLICATION supabase_realtime ADD TABLE results;`
+7. Disable email confirmation in Auth settings (or configure SMTP)
+8. Promote coaches manually (signup always creates athletes): `UPDATE profiles SET role = 'coach' WHERE email = '...';`
 
 ### Test Supabase Project
 A separate Supabase project is used for E2E testing. Credentials in `.env.test` (gitignored). Run the same schema + migration scripts on the test project. Test users created by `npm run test:seed`.

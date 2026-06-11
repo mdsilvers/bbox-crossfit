@@ -49,11 +49,13 @@ export function useStrengthProgram(currentUser) {
     }
   }, []);
 
+  // Pure fetch — deliberately does NOT touch the programSessions state.
+  // programSessions always holds the ACTIVE program's sessions (used by
+  // getMySession / Part A display); browsing another program in the manager
+  // was overwriting it and breaking working-weight display everywhere.
   const loadSessionsForProgram = useCallback(async (programId) => {
     try {
-      const sessions = await db.getSessionsForProgram(programId);
-      setProgramSessions(sessions);
-      return sessions;
+      return await db.getSessionsForProgram(programId);
     } catch (error) {
       console.error('Error loading sessions:', error);
       return [];

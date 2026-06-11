@@ -53,8 +53,7 @@ export default function CoachDashboard() {
     newWOD, setNewWOD,
     movementInput, setMovementInput,
     showMovementDropdown, setShowMovementDropdown,
-    filteredMovements,
-    editingWOD, setEditingWOD,
+    editingWOD,
     showDeleteWODConfirm, setShowDeleteWODConfirm,
     wodPhotoData, setWodPhotoData,
     handleWodPhotoUpload,
@@ -64,6 +63,7 @@ export default function CoachDashboard() {
     loadAllWODs,
     loadMissedWODs,
     postWOD,
+    resetWODForm,
     editWOD,
     deleteWOD,
     confirmDeleteWOD,
@@ -181,13 +181,19 @@ export default function CoachDashboard() {
   };
 
   // Callback after result logging to recalculate PRs and refresh missed WODs
-  const handleResultSuccess = async (freshResults) => {
+  const handleResultSuccess = async (freshResults, logMeta) => {
     await loadMissedWODs(freshResults);
     const prs = calculateBenchmarkPRs(freshResults, allWODs);
     setBenchmarkPRs(prs);
     await badgesHook.checkAndAwardBadges(freshResults, allWODs, prs);
-    // Advance strength program session if WOD had program attached
-    if (todayWOD?.strengthProgramId && strengthProgram.myEnrollment) {
+    // Advance the strength session only on the FIRST log of today's program
+    // WOD — editing a result (or logging a missed WOD) must not advance it
+    if (
+      !logMeta?.isEdit &&
+      logMeta?.wodId === todayWOD?.id &&
+      todayWOD?.strengthProgramId &&
+      strengthProgram.myEnrollment
+    ) {
       await strengthProgram.advanceMySession();
       await strengthProgram.loadMyEnrollment(strengthProgram.activeProgram?.id);
     }
@@ -240,10 +246,7 @@ export default function CoachDashboard() {
               myResult={myResult}
               startLogMissedWOD={(wod) => startLogMissedWOD(wod, navigate)}
               startCustomWorkout={() => startCustomWorkout(navigate)}
-              editPastWorkout={(result) => {
-                editPastWorkout(result);
-                navigate('workout');
-              }}
+              editPastWorkout={(result) => editPastWorkout(result, navigate)}
               deleteWorkout={deleteWorkout}
               showDeleteConfirm={showDeleteConfirm}
               setShowDeleteConfirm={setShowDeleteConfirm}
@@ -277,10 +280,7 @@ export default function CoachDashboard() {
               allWODs={allWODs}
               allAthleteResults={allAthleteResults}
               currentUser={currentUser}
-              editPastWorkout={(result) => {
-                editPastWorkout(result);
-                navigate('workout');
-              }}
+              editPastWorkout={(result) => editPastWorkout(result, navigate)}
               deleteWorkout={deleteWorkout}
               showDeleteConfirm={showDeleteConfirm}
               setShowDeleteConfirm={setShowDeleteConfirm}
@@ -356,14 +356,13 @@ export default function CoachDashboard() {
               setMovementInput={setMovementInput}
               showMovementDropdown={showMovementDropdown}
               setShowMovementDropdown={setShowMovementDropdown}
-              filteredMovements={filteredMovements}
               editingWOD={editingWOD}
-              setEditingWOD={setEditingWOD}
               showDeleteWODConfirm={showDeleteWODConfirm}
               setShowDeleteWODConfirm={setShowDeleteWODConfirm}
               postWOD={() => postWOD(() => loadMyResults())}
+              resetWODForm={resetWODForm}
               editWOD={(wod) => editWOD(wod, navigate)}
-              deleteWOD={(wod) => deleteWOD(wod, allAthleteResults)}
+              deleteWOD={deleteWOD}
               confirmDeleteWOD={() => confirmDeleteWOD(workoutResults, async () => {
                 await loadMyResults();
                 await loadAllResults();
@@ -504,6 +503,13 @@ export default function CoachDashboard() {
           loadReactionsForResults={social.loadReactionsForResults}
           activeProgram={strengthProgram.activeProgram}
           enrollment={strengthProgram.myEnrollment}
+          programSession={
+            // Only override-pinned sessions are knowable here: enrollment has
+            // already advanced past the session that was just logged
+            postWodSummaryData.wod?.programSessionOverride
+              ? strengthProgram.getMySession(postWodSummaryData.wod)
+              : null
+          }
           onDismiss={() => {
             const wasPostLog = postWodSummaryData.mode === 'post-log';
             setPostWodSummaryData(null);

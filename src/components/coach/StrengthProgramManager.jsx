@@ -20,8 +20,6 @@ const STATUS_BADGE = {
 
 export default function StrengthProgramManager({
   allPrograms,
-  activeProgram,
-  programSessions,
   allEnrollments,
   loadAllPrograms,
   loadSessionsForProgram,
@@ -36,6 +34,9 @@ export default function StrengthProgramManager({
   const [showForm, setShowForm] = useState(false);
   const [editingProgram, setEditingProgram] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  // Sessions keyed by program id — a single shared list showed whichever
+  // program was loaded last in every expanded panel
+  const [expandedSessions, setExpandedSessions] = useState({});
   const [overrideSession, setOverrideSession] = useState('');
 
   // Form state
@@ -178,10 +179,10 @@ export default function StrengthProgramManager({
     }
   };
 
-  const handleOverride = async () => {
+  const handleOverride = async (totalSessions) => {
     const num = parseInt(overrideSession, 10);
-    if (!num || num < 1) {
-      alert('Enter a valid session number');
+    if (!num || num < 1 || (totalSessions && num > totalSessions)) {
+      alert(`Enter a session number between 1 and ${totalSessions || '?'}`);
       return;
     }
     try {
@@ -199,7 +200,8 @@ export default function StrengthProgramManager({
       return;
     }
     setExpandedId(program.id);
-    await loadSessionsForProgram(program.id);
+    const sessions = await loadSessionsForProgram(program.id);
+    setExpandedSessions(prev => ({ ...prev, [program.id]: sessions }));
     if (program.status === 'active') {
       await loadAllEnrollments(program.id);
     }
@@ -376,6 +378,7 @@ export default function StrengthProgramManager({
           {allPrograms.map((program) => {
             const isExpanded = expandedId === program.id;
             const isActive = program.status === 'active';
+            const sessions = expandedSessions[program.id] || [];
 
             return (
               <div
@@ -420,11 +423,11 @@ export default function StrengthProgramManager({
                     )}
 
                     {/* Sessions list */}
-                    {programSessions.length > 0 && (
+                    {sessions.length > 0 && (
                       <div className="mb-3">
                         <h4 className="text-slate-300 text-xs font-semibold mb-2">Sessions</h4>
                         <div className="grid grid-cols-2 gap-1">
-                          {programSessions.map((s) => (
+                          {sessions.map((s) => (
                             <div key={s.session_number} className="bg-slate-700 rounded px-2 py-1 text-xs">
                               <span className="text-emerald-400 font-medium">S{s.session_number}</span>
                               <span className="text-slate-300 ml-1">
@@ -455,7 +458,7 @@ export default function StrengthProgramManager({
                             className="w-16 bg-slate-700 text-white px-2 py-1 rounded border border-slate-600 text-xs"
                           />
                           <button
-                            onClick={handleOverride}
+                            onClick={() => handleOverride(program.total_sessions)}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1 rounded font-medium"
                           >
                             Override

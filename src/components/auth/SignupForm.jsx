@@ -11,8 +11,6 @@ export default function SignupForm() {
     setSignupPassword,
     signupConfirmPassword,
     setSignupConfirmPassword,
-    signupRole,
-    setSignupRole,
     signupGroup,
     setSignupGroup,
     handleSignup,
@@ -106,29 +104,18 @@ export default function SignupForm() {
             </p>
           )}
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-slate-400 text-sm font-medium mb-2.5">I am a...</label>
-            <select
-              value={signupRole}
-              onChange={(e) => setSignupRole(e.target.value)}
-              className="w-full bg-slate-700/50 text-white text-base px-4 py-3.5 rounded-xl border border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all"
-            >
-              <option value="athlete">Athlete</option>
-              <option value="coach">Coach</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-slate-400 text-sm font-medium mb-2.5">Group</label>
-            <select
-              value={signupGroup}
-              onChange={(e) => setSignupGroup(e.target.value)}
-              className="w-full bg-slate-700/50 text-white text-base px-4 py-3.5 rounded-xl border border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all"
-            >
-              <option value="mens">Men's</option>
-              <option value="womens">Women's</option>
-            </select>
-          </div>
+        {/* Everyone signs up as an athlete; coaches are promoted by an admin.
+            A self-service coach option let anyone grant themselves coach access. */}
+        <div>
+          <label className="block text-slate-400 text-sm font-medium mb-2.5">Group</label>
+          <select
+            value={signupGroup}
+            onChange={(e) => setSignupGroup(e.target.value)}
+            className="w-full bg-slate-700/50 text-white text-base px-4 py-3.5 rounded-xl border border-slate-600 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all"
+          >
+            <option value="mens">Men's</option>
+            <option value="womens">Women's</option>
+          </select>
         </div>
       </div>
 

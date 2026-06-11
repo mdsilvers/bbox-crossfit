@@ -21,7 +21,7 @@ export const STANDARD_MOVEMENTS = [
 
   // Barbell
   'Deadlift', 'Sumo Deadlift High Pull', 'Thruster', 'Front Squat', 'Back Squat',
-  'Overhead Squat', 'Bench Press', 'Strict Press', 'Push Press', 'Good Morning',
+  'Bench Press', 'Strict Press', 'Push Press', 'Good Morning',
   'Pendlay Row', 'Bent-Over Row', 'Romanian Deadlift', 'Hang Clean Pull',
 
   // Dumbbell/Kettlebell

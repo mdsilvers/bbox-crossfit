@@ -98,7 +98,7 @@ export default function CoachHomeDash({
                     </span>
                   </div>
                   <div className="text-slate-400 text-sm mt-1">
-                    {pr.attemptCount} attempt{pr.attemptCount !== 1 ? 's' : ''} • Last: {new Date(pr.date).toLocaleDateString()}
+                    {pr.attemptCount} attempt{pr.attemptCount !== 1 ? 's' : ''} • Last: {new Date(pr.date + 'T00:00:00').toLocaleDateString()}
                   </div>
                 </div>
                 <div className="text-right">
@@ -612,7 +612,7 @@ export default function CoachHomeDash({
                             <div className="flex items-center gap-1 text-slate-400">
                               <Calendar className="w-3 h-3 text-red-500" />
                               <span className="text-slate-300">
-                                {new Date(result.date).toLocaleDateString('en-US', {
+                                {new Date(result.date + 'T00:00:00').toLocaleDateString('en-US', {
                                   weekday: 'short',
                                   month: 'short',
                                   day: 'numeric'

@@ -140,6 +140,10 @@ export function useResults(currentUser) {
     const workoutDate = editingWorkout ? editingWorkout.date : todayWOD.date;
     const wodId = editingWorkout?.wodId || todayWOD?.id;
     const wasUpdate = !!myResult.existingResultId;
+    // True only when re-saving an existing result for the same WOD. A row
+    // updated because today's slot held a different WOD's result still counts
+    // as a first log (unique constraint on athlete_id + date forces an update).
+    const isEdit = wasUpdate && !myResult.existingResultForDifferentWod;
 
     const resultData = {
       wodId,
@@ -193,7 +197,7 @@ export function useResults(currentUser) {
         });
       }
 
-      if (onSuccess) await onSuccess(updatedMyResults);
+      if (onSuccess) await onSuccess(updatedMyResults, { isEdit, wodId });
 
       if (editingWorkout) {
         setEditingWorkout(null);

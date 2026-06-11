@@ -71,10 +71,10 @@ export const parseAmrap = (str) => {
   const trimmed = str.trim();
   if (!trimmed) return null;
 
-  // Match patterns like "8+15", "8 + 15", "8 rounds + 15 reps"
-  const match = trimmed.match(/^(\d+)\s*(?:rounds?)?\s*\+\s*(\d+)\s*(?:reps?)?$/i);
+  // Match patterns like "8+15", "8 + 15", "8 rounds + 15 reps", "8 rounds"
+  const match = trimmed.match(/^(\d+)\s*(?:rounds?)?(?:\s*\+\s*(\d+)\s*(?:reps?)?)?$/i);
   if (match) {
-    return { rounds: parseInt(match[1], 10), reps: parseInt(match[2], 10) };
+    return { rounds: parseInt(match[1], 10), reps: match[2] ? parseInt(match[2], 10) : 0 };
   }
 
   // Bare number = rounds only
@@ -257,8 +257,12 @@ export const compareScores = (a, b, wodType) => {
   }
 
   // weight, rounds, freeform-with-numbers
-  const numA = parseFloat(a) || -Infinity;
-  const numB = parseFloat(b) || -Infinity;
+  // parseFloat('0') is falsy, so guard with isNaN rather than || to keep
+  // a legitimate 0 score ranked above unparseable values
+  const fA = parseFloat(a);
+  const fB = parseFloat(b);
+  const numA = isNaN(fA) ? -Infinity : fA;
+  const numB = isNaN(fB) ? -Infinity : fB;
   return numB - numA; // higher is better
 };
 

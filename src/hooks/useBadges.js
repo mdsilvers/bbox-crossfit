@@ -44,7 +44,9 @@ export function useBadges(currentUser) {
       // Award new badges in a single batch call
       if (newBadgeKeys.length > 0) {
         await db.awardBadges(currentUser.id, newBadgeKeys);
-        setMyBadges(prev => [...prev, ...newBadgeKeys]);
+        // Set-merge: concurrent check calls capture the same myBadges snapshot
+        // and would otherwise append duplicates
+        setMyBadges(prev => [...new Set([...prev, ...newBadgeKeys])]);
         const badge = BADGES.find(b => b.key === newBadgeKeys[0]);
         if (badge) {
           setNewBadgeToast(badge);

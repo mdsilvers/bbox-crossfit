@@ -57,16 +57,17 @@ export default function CoachAthleteList({
       new Date(b.date) - new Date(a.date)
     );
 
-    // Calculate stats
+    // Calculate stats — parse YYYY-MM-DD as local midnight (bare new Date(str)
+    // is UTC and shifts the calendar day west of UTC)
     const thisWeek = workouts.filter(w => {
-      const workoutDate = new Date(w.date);
+      const workoutDate = new Date(w.date + 'T00:00:00');
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       return workoutDate >= weekAgo;
     }).length;
 
     const lastWorkout = workouts[0];
-    const lastWorkoutDate = lastWorkout ? new Date(lastWorkout.date) : null;
+    const lastWorkoutDate = lastWorkout ? new Date(lastWorkout.date + 'T00:00:00') : null;
     const daysAgo = lastWorkoutDate ?
       Math.floor((new Date() - lastWorkoutDate) / (1000 * 60 * 60 * 24)) : null;
 
@@ -161,8 +162,11 @@ export default function CoachAthleteList({
                     </h4>
                     <div className="space-y-2 max-h-96 overflow-y-auto">
                       {athlete.workouts.map((workout) => {
-                        // Find the WOD for this workout to get the name
-                        const wod = allWODs.find(w => w.date === workout.date);
+                        // Match by wodId first — multiple group WODs can share
+                        // a date, and a date-only lookup can pick the wrong one
+                        const wod =
+                          (workout.wodId && allWODs.find(w => w.id === workout.wodId)) ||
+                          allWODs.find(w => w.date === workout.date);
 
                         return (
                           <div
@@ -204,7 +208,7 @@ export default function CoachAthleteList({
                                 <div className="flex items-center gap-2">
                                   <Calendar className="w-3 h-3 text-red-500" />
                                   <span className="text-slate-400 text-xs">
-                                    {new Date(workout.date).toLocaleDateString('en-US', {
+                                    {new Date(workout.date + 'T00:00:00').toLocaleDateString('en-US', {
                                       weekday: 'short',
                                       month: 'short',
                                       day: 'numeric'

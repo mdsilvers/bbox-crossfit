@@ -9,9 +9,13 @@ export default function StrengthPartDisplay({
   strengthScore,  // logged weight (string) — null if not logged yet
   compact = false,
 }) {
-  if (!program || !session) return null;
+  if (!program) return null;
+  // Without a session we can still show the program, exercise, and logged
+  // score (e.g. the post-log summary, where the enrolled session has already
+  // advanced past the one that was just completed)
+  if (!session && !strengthScore) return null;
 
-  const workingWeight = enrollment
+  const workingWeight = enrollment && session
     ? calculateWorkingWeight(parseFloat(enrollment.one_rep_max), parseFloat(session.percentage))
     : null;
 
@@ -20,9 +24,11 @@ export default function StrengthPartDisplay({
       <div className="flex items-center gap-2 text-sm">
         <span className="bg-emerald-600 text-white px-2 py-0.5 rounded text-xs font-bold">A</span>
         <span className="text-slate-300">{program.exercise}</span>
-        <span className="text-white font-medium">
-          {session.sets}×{session.reps} @ {session.percentage}%
-        </span>
+        {session && (
+          <span className="text-white font-medium">
+            {session.sets}×{session.reps} @ {session.percentage}%
+          </span>
+        )}
         {workingWeight && (
           <span className="text-emerald-400 font-medium">({workingWeight} kg)</span>
         )}
@@ -40,18 +46,22 @@ export default function StrengthPartDisplay({
         <span className="text-emerald-400 text-xs font-medium uppercase tracking-wider">
           {program.name}
         </span>
-        <span className="text-slate-500 text-xs ml-auto">
-          Session {session.session_number}/{program.total_sessions || '?'}
-        </span>
+        {session && (
+          <span className="text-slate-500 text-xs ml-auto">
+            Session {session.session_number}/{program.total_sessions || '?'}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-3 mb-2">
         <Dumbbell className="w-5 h-5 text-emerald-400 flex-shrink-0" />
         <div>
           <p className="text-white font-medium text-lg">{program.exercise}</p>
-          <p className="text-emerald-300 text-sm">
-            {session.sets} sets × {session.reps} reps @ {session.percentage}% of 1RM
-          </p>
+          {session && (
+            <p className="text-emerald-300 text-sm">
+              {session.sets} sets × {session.reps} reps @ {session.percentage}% of 1RM
+            </p>
+          )}
         </div>
       </div>
 
@@ -59,9 +69,11 @@ export default function StrengthPartDisplay({
         <div className="bg-emerald-900/40 rounded px-3 py-2 mt-2">
           <div className="flex justify-between text-sm">
             <span className="text-slate-400">Your 1RM: {enrollment.one_rep_max} kg</span>
-            <span className="text-emerald-300 font-bold">
-              Working weight: {workingWeight} kg
-            </span>
+            {workingWeight && (
+              <span className="text-emerald-300 font-bold">
+                Working weight: {workingWeight} kg
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -78,7 +90,7 @@ export default function StrengthPartDisplay({
         </div>
       )}
 
-      {session.notes && (
+      {session?.notes && (
         <p className="text-slate-400 text-sm italic mt-2">{session.notes}</p>
       )}
     </div>

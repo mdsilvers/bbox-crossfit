@@ -1,4 +1,20 @@
 import { isBenchmarkWod } from './benchmarks';
+import { parseTimeToSeconds } from './score-utils';
+
+// Format a Date as YYYY-MM-DD using local time. toISOString() converts to UTC,
+// which shifts the calendar day for any non-UTC timezone and mis-buckets weeks.
+function toLocalDateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Monday (local midnight) of the week containing d. Does not mutate d.
+function mondayOf(d) {
+  const monday = new Date(d);
+  const day = monday.getDay();
+  monday.setDate(monday.getDate() - day + (day === 0 ? -6 : 1));
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
 
 // Badge definitions
 export const BADGES = [
@@ -24,7 +40,7 @@ export const BADGES = [
         const d = new Date(r.date + 'T00:00:00');
         const weekStart = new Date(d);
         weekStart.setDate(d.getDate() - d.getDay());
-        const key = weekStart.toISOString().split('T')[0];
+        const key = toLocalDateKey(weekStart);
         weekMap[key] = (weekMap[key] || 0) + 1;
       });
       return Object.values(weekMap).some(count => count >= 5);
@@ -100,55 +116,40 @@ export const BADGES = [
       return results.some(r => {
         const wod = allWODs.find(w => w.id === r.wodId);
         if (wod?.name?.toLowerCase() !== 'fran' || !r.time) return false;
-        const parts = r.time.split(':').map(Number);
-        if (parts.length === 2) {
-          const totalSeconds = parts[0] * 60 + parts[1];
-          return totalSeconds < 420; // 7 * 60
-        }
-        return false;
+        const totalSeconds = parseTimeToSeconds(r.time);
+        return totalSeconds != null && totalSeconds < 420; // 7 * 60
       });
     },
   },
 ];
 
 /**
- * Calculate streak weeks: consecutive weeks with 3+ workouts,
- * walking backwards from current week.
+ * Calculate streak weeks: consecutive weeks (Mon-Sun) with 3+ workouts,
+ * walking backwards from the current week. The current week counts once it
+ * reaches 3 workouts, but an in-progress week with fewer than 3 does not
+ * break the streak — otherwise every streak would reset to 0 each Monday.
  */
 export function calculateStreakWeeks(results) {
   if (!results || results.length === 0) return 0;
 
-  // Group results by ISO week (Mon-Sun)
   const weekMap = {};
   results.forEach(r => {
-    const d = new Date(r.date + 'T00:00:00');
-    // Get Monday of the week
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(d.setDate(diff));
-    const key = monday.toISOString().split('T')[0];
+    const key = toLocalDateKey(mondayOf(new Date(r.date + 'T00:00:00')));
     weekMap[key] = (weekMap[key] || 0) + 1;
   });
 
-  // Walk backwards from current week
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  let currentMonday = new Date(now.setDate(diff));
-  currentMonday.setHours(0, 0, 0, 0);
-
+  const walker = mondayOf(new Date());
   let streak = 0;
 
-  while (true) {
-    const key = currentMonday.toISOString().split('T')[0];
-    const count = weekMap[key] || 0;
-    if (count >= 3) {
-      streak++;
-      // Go to previous Monday
-      currentMonday.setDate(currentMonday.getDate() - 7);
-    } else {
-      break;
-    }
+  if ((weekMap[toLocalDateKey(walker)] || 0) >= 3) {
+    streak++;
+  }
+
+  // Completed weeks must qualify consecutively
+  walker.setDate(walker.getDate() - 7);
+  while ((weekMap[toLocalDateKey(walker)] || 0) >= 3) {
+    streak++;
+    walker.setDate(walker.getDate() - 7);
   }
 
   return streak;

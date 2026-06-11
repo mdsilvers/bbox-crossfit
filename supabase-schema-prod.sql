@@ -246,6 +246,8 @@ CREATE POLICY "Coaches delete sessions" ON program_sessions FOR DELETE TO authen
 CREATE POLICY "Enrollments viewable by authenticated" ON athlete_enrollments FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Users insert own enrollment" ON athlete_enrollments FOR INSERT TO authenticated WITH CHECK (auth.uid() = athlete_id);
 CREATE POLICY "Users update own enrollment" ON athlete_enrollments FOR UPDATE TO authenticated USING (auth.uid() = athlete_id);
+-- Coaches can bulk-override sessions; without this the override silently no-ops
+CREATE POLICY "Coaches update any enrollment" ON athlete_enrollments FOR UPDATE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'coach'));
 
 
 -- ==================== 3. INDEXES ====================
@@ -264,6 +266,22 @@ CREATE INDEX IF NOT EXISTS idx_program_sessions_program ON program_sessions(prog
 CREATE INDEX IF NOT EXISTS idx_enrollments_program ON athlete_enrollments(program_id);
 CREATE INDEX IF NOT EXISTS idx_enrollments_athlete ON athlete_enrollments(athlete_id);
 CREATE INDEX IF NOT EXISTS idx_wods_program ON wods(strength_program_id);
+
+-- At most one active strength program (activateProgram is two updates; this
+-- closes the race that could leave two active and break getActiveProgram)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_one_active_program
+  ON strength_programs (status)
+  WHERE status = 'active';
+
+-- Generated photo flags — list queries select has_photo instead of pulling
+-- the base64 photo_url payload (see src/lib/database.js LIST_COLUMNS)
+ALTER TABLE wods
+  ADD COLUMN IF NOT EXISTS has_photo BOOLEAN
+  GENERATED ALWAYS AS (photo_url IS NOT NULL) STORED;
+
+ALTER TABLE results
+  ADD COLUMN IF NOT EXISTS has_photo BOOLEAN
+  GENERATED ALWAYS AS (photo_url IS NOT NULL) STORED;
 
 
 -- ==================== 4. TRIGGERS ====================
@@ -307,7 +325,7 @@ BEGIN
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'name', 'User'),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'athlete'),
+    'athlete',  -- never trust client-supplied role; promote coaches manually
     NEW.raw_user_meta_data->>'group_type'
   );
   RETURN NEW;
@@ -317,3 +335,39 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Users can update their own profile but never their own role — promotions
+-- happen via the SQL Editor / service role, where auth.uid() is NULL
+CREATE OR REPLACE FUNCTION public.prevent_role_self_change()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF auth.uid() IS NOT NULL AND NEW.role IS DISTINCT FROM OLD.role THEN
+    RAISE EXCEPTION 'role can only be changed by an administrator';
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS prevent_role_self_change ON profiles;
+CREATE TRIGGER prevent_role_self_change
+  BEFORE UPDATE ON profiles
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_role_self_change();
+
+
+-- ==================== 6. STAMP COMMENT AUTHOR SERVER-SIDE ====================
+-- author_name/author_role come from the caller's profile, not the request
+-- body — prevents spoofed coach badges and impersonated names
+
+CREATE OR REPLACE FUNCTION public.set_comment_author()
+RETURNS TRIGGER AS $$
+BEGIN
+  SELECT name, role INTO NEW.author_name, NEW.author_role
+  FROM public.profiles WHERE id = auth.uid();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS set_comment_author ON result_comments;
+CREATE TRIGGER set_comment_author
+  BEFORE INSERT ON result_comments
+  FOR EACH ROW EXECUTE FUNCTION public.set_comment_author();

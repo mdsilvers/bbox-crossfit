@@ -3,7 +3,7 @@ import { Plus, Trash2, Dumbbell, Calendar, Users, Image, GripVertical } from 'lu
 import StrengthProgramManager from './StrengthProgramManager';
 import LazyPhoto from '../shared/LazyPhoto';
 import { isBenchmarkWod, getBenchmarkByName, getBenchmarksByCategory } from '../../lib/benchmarks';
-import { STANDARD_MOVEMENTS, getLocalToday } from '../../lib/constants';
+import { STANDARD_MOVEMENTS } from '../../lib/constants';
 import {
   DndContext,
   closestCenter,
@@ -20,7 +20,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-function SortableMovementItem({ id, index, movement, movementInput, showMovementDropdown, filteredMovements, handleMovementInput, selectMovement, updateMovement, removeMovement, setShowMovementDropdown, canRemove }) {
+function SortableMovementItem({ id, index, movement, movementInput, showMovementDropdown, handleMovementInput, selectMovement, updateMovement, removeMovement, setShowMovementDropdown, canRemove }) {
   const {
     attributes,
     listeners,
@@ -29,6 +29,18 @@ function SortableMovementItem({ id, index, movement, movementInput, showMovement
     transition,
     isDragging,
   } = useSortable({ id });
+
+  // Suggestions are derived from THIS row's input. A single shared filtered
+  // list meant refocusing a row showed whichever row was typed in last.
+  const inputValue = movementInput[index] || '';
+  const suggestions = inputValue.trim()
+    ? STANDARD_MOVEMENTS.filter(m => m.toLowerCase().includes(inputValue.toLowerCase()))
+    : [];
+  const isCustomName = inputValue.trim() && !STANDARD_MOVEMENTS.includes(inputValue);
+
+  const closeDropdown = () => {
+    setShowMovementDropdown(prev => prev.map((v, i) => (i === index ? false : v)));
+  };
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -84,38 +96,40 @@ function SortableMovementItem({ id, index, movement, movementInput, showMovement
             <input
               type="text"
               placeholder="Type to search movements..."
-              value={movementInput[index] || ''}
+              value={inputValue}
               onChange={(e) => handleMovementInput(index, e.target.value)}
               onFocus={() => {
-                if (movementInput[index]?.trim()) {
-                  const updatedDropdown = [...showMovementDropdown];
-                  updatedDropdown[index] = true;
-                  setShowMovementDropdown(updatedDropdown);
+                if (inputValue.trim()) {
+                  setShowMovementDropdown(prev => prev.map((v, i) => (i === index ? true : v)));
                 }
               }}
+              onBlur={closeDropdown}
               className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none text-sm"
             />
-            {showMovementDropdown[index] && filteredMovements.length > 0 && (
+            {showMovementDropdown[index] && (suggestions.length > 0 || isCustomName) && (
               <div className="absolute z-10 w-full mt-1 bg-slate-600 border border-slate-500 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                {filteredMovements.slice(0, 10).map((mov, idx) => (
+                {/* onMouseDown fires before the input's blur, so selecting still works */}
+                {suggestions.slice(0, 10).map((mov) => (
                   <div
-                    key={idx}
-                    onClick={() => selectMovement(index, mov)}
+                    key={mov}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectMovement(index, mov);
+                    }}
                     className="px-3 py-2 hover:bg-red-600 cursor-pointer text-white transition-colors text-sm"
                   >
                     {mov}
                   </div>
                 ))}
-                {!STANDARD_MOVEMENTS.includes(movementInput[index]) && movementInput[index]?.trim() && (
+                {isCustomName && (
                   <div
-                    onClick={() => {
-                      const updatedDropdown = [...showMovementDropdown];
-                      updatedDropdown[index] = false;
-                      setShowMovementDropdown(updatedDropdown);
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      closeDropdown();
                     }}
                     className="px-3 py-2 bg-slate-700 hover:bg-slate-600 cursor-pointer text-white border-t border-slate-500 font-semibold transition-colors text-sm"
                   >
-                    + Add "{movementInput[index]}" as custom
+                    + Add "{inputValue}" as custom
                   </div>
                 )}
               </div>
@@ -163,12 +177,11 @@ export default function CoachProgramView({
   setMovementInput,
   showMovementDropdown,
   setShowMovementDropdown,
-  filteredMovements,
   editingWOD,
-  setEditingWOD,
   showDeleteWODConfirm,
   setShowDeleteWODConfirm,
   postWOD,
+  resetWODForm,
   editWOD,
   deleteWOD,
   confirmDeleteWOD,
@@ -216,8 +229,6 @@ export default function CoachProgramView({
         <>
           <StrengthProgramManager
             allPrograms={strengthProgram.allPrograms}
-            activeProgram={strengthProgram.activeProgram}
-            programSessions={strengthProgram.programSessions}
             allEnrollments={strengthProgram.allEnrollments}
             loadAllPrograms={strengthProgram.loadAllPrograms}
             loadSessionsForProgram={strengthProgram.loadSessionsForProgram}
@@ -235,21 +246,7 @@ export default function CoachProgramView({
             <h2 className="text-xl font-bold text-white">WOD Programming</h2>
             <button
               onClick={() => {
-                setEditingWOD(null);
-                setWodPhotoData(null);
-                setSelectedCoach({ id: currentUser.id, name: currentUser.name });
-                setNewWOD({
-                  name: '',
-                  date: getLocalToday(),
-                  type: 'For Time',
-                  group: 'combined',
-                  movements: [{ name: '', reps: '', notes: '' }],
-                  notes: '',
-                  strengthProgramId: null,
-                  programSessionOverride: null,
-                });
-                setMovementInput(['']);
-                setShowMovementDropdown([false]);
+                resetWODForm();
                 setShowWODForm(true);
               }}
               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-lg font-semibold text-sm flex items-center gap-2"
@@ -264,7 +261,10 @@ export default function CoachProgramView({
               <Dumbbell className="w-16 h-16 text-slate-600 mx-auto mb-3" />
               <p className="text-slate-400 mb-4">No WODs programmed yet</p>
               <button
-                onClick={() => setShowWODForm(true)}
+                onClick={() => {
+                  resetWODForm();
+                  setShowWODForm(true);
+                }}
                 className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold"
               >
                 Program First WOD
@@ -273,7 +273,9 @@ export default function CoachProgramView({
           ) : (
             <div className="space-y-3">
               {allWODs.map((wod) => {
-                const wodDate = new Date(wod.date);
+                // Parse as local midnight — bare new Date('YYYY-MM-DD') is UTC
+                // and flips the TODAY/Past badges west of UTC
+                const wodDate = new Date(wod.date + 'T00:00:00');
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 wodDate.setHours(0, 0, 0, 0);
@@ -446,21 +448,7 @@ export default function CoachProgramView({
             <button
               onClick={() => {
                 setShowWODForm(false);
-                setEditingWOD(null);
-                setWodPhotoData(null);
-                setSelectedCoach({ id: currentUser.id, name: currentUser.name });
-                setNewWOD({
-                  name: '',
-                  date: getLocalToday(),
-                  type: 'For Time',
-                  group: 'combined',
-                  movements: [{ name: '', reps: '', notes: '' }],
-                  notes: '',
-                  strengthProgramId: null,
-                  programSessionOverride: null,
-                });
-                setMovementInput(['']);
-                setShowMovementDropdown([false]);
+                resetWODForm();
               }}
               className="text-slate-400 hover:text-white"
             >
@@ -571,6 +559,7 @@ export default function CoachProgramView({
                 <option>Chipper</option>
                 <option>Strength</option>
                 <option>Metcon</option>
+                <option>Freeform</option>
               </select>
             </div>
             <div>
@@ -666,7 +655,6 @@ export default function CoachProgramView({
                     movement={movement}
                     movementInput={movementInput}
                     showMovementDropdown={showMovementDropdown}
-                    filteredMovements={filteredMovements}
                     handleMovementInput={handleMovementInput}
                     selectMovement={selectMovement}
                     updateMovement={updateMovement}
@@ -742,20 +730,7 @@ export default function CoachProgramView({
             <button
               onClick={() => {
                 setShowWODForm(false);
-                setEditingWOD(null);
-                setWodPhotoData(null);
-                setSelectedCoach({ id: currentUser.id, name: currentUser.name });
-                setNewWOD({
-                  date: getLocalToday(),
-                  type: 'For Time',
-                  group: 'combined',
-                  movements: [{ name: '', reps: '', notes: '' }],
-                  notes: '',
-                  strengthProgramId: null,
-                  programSessionOverride: null,
-                });
-                setMovementInput(['']);
-                setShowMovementDropdown([false]);
+                resetWODForm();
               }}
               className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
             >

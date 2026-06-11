@@ -62,6 +62,23 @@ async function createTestUser(user) {
   }
 
   console.log(`  ✓ Created ${user.role}: ${user.email}`);
+
+  // The signup trigger always creates athletes (privilege-escalation fix),
+  // so a freshly seeded coach needs manual promotion in the SQL Editor.
+  if (user.role === 'coach' && data.user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', data.user.id)
+      .maybeSingle();
+    if (profile && profile.role !== 'coach') {
+      console.warn(
+        `  ⚠ ${user.email} was created with role '${profile.role}'. Promote it in the SQL Editor:\n` +
+        `    UPDATE profiles SET role = 'coach' WHERE email = '${user.email}';`
+      );
+    }
+  }
+
   await supabase.auth.signOut();
   return data.user;
 }

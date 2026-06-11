@@ -81,7 +81,7 @@ export default function AthleteHistoryView({
             if (!wod || wod.date !== result.date) {
               wod = allWODs.find(w => w.date === result.date) || wod;
             }
-            const dateStr = new Date(result.date).toLocaleDateString('en-US', {
+            const dateStr = new Date(result.date + 'T00:00:00').toLocaleDateString('en-US', {
               weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'
             }).toLowerCase();
             return (
@@ -199,7 +199,7 @@ export default function AthleteHistoryView({
                           <div className="flex items-center gap-1 text-slate-400">
                             <Calendar className="w-3 h-3 text-red-500" />
                             <span className="text-slate-300">
-                              {new Date(result.date).toLocaleDateString('en-US', {
+                              {new Date(result.date + 'T00:00:00').toLocaleDateString('en-US', {
                                 weekday: 'short',
                                 month: 'short',
                                 day: 'numeric'

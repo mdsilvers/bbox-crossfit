@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dumbbell, X } from 'lucide-react';
 
 export default function OneRepMaxPrompt({
@@ -13,6 +13,14 @@ export default function OneRepMaxPrompt({
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
+
+  // Enrollment loads in the background after mount — sync the input when it
+  // arrives so "Update" doesn't open with a blank field
+  useEffect(() => {
+    if (enrollment?.one_rep_max != null && !editing) {
+      setOneRepMax(String(enrollment.one_rep_max));
+    }
+  }, [enrollment?.one_rep_max, editing]);
 
   if (!program) return null;
 

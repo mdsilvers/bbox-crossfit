@@ -148,8 +148,10 @@ export const BENCHMARK_WODS = {
       ]
     },
     {
+      // Scored as total reps across both movements, not a weight — Strength
+      // type would render the score as kgs
       name: 'Lynne',
-      type: 'Strength',
+      type: 'Freeform',
       movements: [
         { name: 'Bench Press', reps: '5 rounds max', notes: 'Rx: Bodyweight' },
         { name: 'Pull-up', reps: '5 rounds max', notes: 'Rest as needed, score = total reps' }

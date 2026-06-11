@@ -31,9 +31,8 @@ export async function signUp(email, password, name, role, group) {
 }
 
 export async function signIn(email, password) {
-  // Clear any existing session first to prevent stale session issues
-  await supabase.auth.signOut({ scope: 'local' });
-
+  // No pre-emptive signOut here: it broadcasts SIGNED_OUT to every open tab,
+  // so a failed login attempt would log the user out everywhere
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -225,11 +224,12 @@ export async function checkWodConflict(date, group, excludeId = null) {
   // Check for conflicts based on group type
   if (group === 'combined') {
     // Check if mens or womens WOD already exists
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('wods')
       .select('id, group_type')
       .eq('date', date)
       .in('group_type', ['mens', 'womens']);
+    if (existingError) throw existingError;
 
     if (existing && existing.length > 0) {
       const conflicting = existing.find(w => w.id !== excludeId);
@@ -242,12 +242,13 @@ export async function checkWodConflict(date, group, excludeId = null) {
     }
   } else {
     // Posting mens or womens - check if combined exists
-    const { data: combined } = await supabase
+    const { data: combined, error: combinedError } = await supabase
       .from('wods')
       .select('id')
       .eq('date', date)
       .eq('group_type', 'combined')
       .neq('id', excludeId || '00000000-0000-0000-0000-000000000000');
+    if (combinedError) throw combinedError;
 
     if (combined && combined.length > 0) {
       return {
@@ -257,12 +258,13 @@ export async function checkWodConflict(date, group, excludeId = null) {
     }
 
     // Check if same group WOD already exists
-    const { data: sameGroup } = await supabase
+    const { data: sameGroup, error: sameGroupError } = await supabase
       .from('wods')
       .select('id')
       .eq('date', date)
       .eq('group_type', group)
       .neq('id', excludeId || '00000000-0000-0000-0000-000000000000');
+    if (sameGroupError) throw sameGroupError;
 
     if (sameGroup && sameGroup.length > 0) {
       return {
@@ -670,10 +672,14 @@ export async function getAllCoaches() {
 // ==================== STRENGTH PROGRAM FUNCTIONS ====================
 
 export async function getActiveProgram() {
+  // limit(1) keeps this resilient if two programs ever end up active at once
+  // (.maybeSingle() alone throws on multiple rows, killing the whole feature)
   const { data, error } = await supabase
     .from('strength_programs')
     .select('*')
     .eq('status', 'active')
+    .order('updated_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
   if (error) throw error;
   return data;

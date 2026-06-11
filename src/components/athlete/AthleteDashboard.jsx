@@ -276,13 +276,19 @@ export default function AthleteDashboard() {
               customWodNameError={customWodNameError}
               setCustomWodNameError={setCustomWodNameError}
               allWODs={allWODs}
-              logResult={() => logResult(todayWOD, allWODs, async (results) => {
+              logResult={() => logResult(todayWOD, allWODs, async (results, logMeta) => {
                 await loadMissedWODs(results);
                 const prs = calculateBenchmarkPRs(results, allWODs);
                 setBenchmarkPRs(prs);
                 await badges.checkAndAwardBadges(results, allWODs, prs);
-                // Advance strength program session if WOD had program attached
-                if (todayWOD?.strengthProgramId && strengthProgram.myEnrollment) {
+                // Advance the strength session only on the FIRST log of today's
+                // program WOD — edits and missed-WOD logs must not advance it
+                if (
+                  !logMeta?.isEdit &&
+                  logMeta?.wodId === todayWOD?.id &&
+                  todayWOD?.strengthProgramId &&
+                  strengthProgram.myEnrollment
+                ) {
                   await strengthProgram.advanceMySession();
                   await strengthProgram.loadMyEnrollment(strengthProgram.activeProgram?.id);
                 }
@@ -366,6 +372,13 @@ export default function AthleteDashboard() {
           loadReactionsForResults={social.loadReactionsForResults}
           activeProgram={strengthProgram.activeProgram}
           enrollment={strengthProgram.myEnrollment}
+          programSession={
+            // Only override-pinned sessions are knowable here: enrollment has
+            // already advanced past the session that was just logged
+            postWodSummaryData.wod?.programSessionOverride
+              ? strengthProgram.getMySession(postWodSummaryData.wod)
+              : null
+          }
           onDismiss={() => setPostWodSummaryData(null)}
         />
       )}

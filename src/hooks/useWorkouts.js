@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as db from '../lib/database';
-import { STANDARD_MOVEMENTS, getLocalToday } from '../lib/constants';
+import { getLocalToday } from '../lib/constants';
 
 export function useWorkouts(currentUser) {
   const [allWODs, setAllWODs] = useState([]);
@@ -19,7 +19,6 @@ export function useWorkouts(currentUser) {
   });
   const [movementInput, setMovementInput] = useState(['']);
   const [showMovementDropdown, setShowMovementDropdown] = useState([false]);
-  const [filteredMovements, setFilteredMovements] = useState([]);
   const [editingWOD, setEditingWOD] = useState(null);
   const [showDeleteWODConfirm, setShowDeleteWODConfirm] = useState(null);
   const [wodPhotoData, setWodPhotoData] = useState(null);
@@ -98,6 +97,28 @@ export function useWorkouts(currentUser) {
     }
   };
 
+  // Single source of truth for clearing the WOD form — the form previously
+  // had four hand-copied reset blocks and one of them drifted (dropped `name`)
+  const resetWODForm = () => {
+    setEditingWOD(null);
+    setWodPhotoData(null);
+    if (currentUser) {
+      setSelectedCoach({ id: currentUser.id, name: currentUser.name });
+    }
+    setNewWOD({
+      name: '',
+      date: getLocalToday(),
+      type: 'For Time',
+      group: 'combined',
+      movements: [{ name: '', reps: '', notes: '' }],
+      notes: '',
+      strengthProgramId: null,
+      programSessionOverride: null,
+    });
+    setMovementInput(['']);
+    setShowMovementDropdown([false]);
+  };
+
   const addSectionHeader = () => {
     const header = { name: '', reps: '', notes: '', type: 'header' };
     const hasHeader = newWOD.movements.some(m => m.type === 'header');
@@ -139,21 +160,7 @@ export function useWorkouts(currentUser) {
       const action = editingWOD ? 'updated' : 'posted';
       alert(`WOD ${action} successfully!`);
       setShowWODForm(false);
-      setEditingWOD(null);
-      setWodPhotoData(null);
-      setSelectedCoach({ id: currentUser.id, name: currentUser.name });
-      setNewWOD({
-        name: '',
-        date: getLocalToday(),
-        type: 'For Time',
-        group: 'combined',
-        movements: [{ name: '', reps: '', notes: '' }],
-        notes: '',
-        strengthProgramId: null,
-        programSessionOverride: null,
-      });
-      setMovementInput(['']);
-      setShowMovementDropdown([false]);
+      resetWODForm();
       await loadAllWODs();
       await loadTodayWOD();
       if (onSuccess) await onSuccess();
@@ -169,8 +176,14 @@ export function useWorkouts(currentUser) {
       date: wod.date,
       type: wod.type,
       group: wod.group,
-      movements: wod.movements,
-      notes: wod.notes
+      // Deep-copy movements: form edits would otherwise mutate the WOD
+      // object still rendered in the list (visible even after Cancel)
+      movements: wod.movements.map(m => ({ ...m })),
+      notes: wod.notes,
+      // Without these, saving an edit strips the attached strength program
+      // (updateWod coerces missing fields to null)
+      strengthProgramId: wod.strengthProgramId || null,
+      programSessionOverride: wod.programSessionOverride || null,
     });
     // Photo stripped from list query — fetch on demand so it isn't lost on save.
     let photoData = wod.photoData;
@@ -191,17 +204,27 @@ export function useWorkouts(currentUser) {
     if (navigate) navigate('program');
   };
 
-  const deleteWOD = async (wod, allAthleteResults) => {
-    const athleteResults = allAthleteResults.filter(r =>
-      r.date === wod.date && r.athleteEmail !== currentUser.email
-    );
+  const deleteWOD = async (wod) => {
+    // Check the server, not client state: allAthleteResults loads in the
+    // background phase and can still be empty when the coach clicks Delete,
+    // which would let the delete through and orphan athlete results.
+    try {
+      const resultsData = await db.getResultsForDate(wod.date);
+      const results = resultsData.map(r => db.resultToAppFormat(r));
+      const athleteResults = results.filter(r =>
+        r.athleteEmail !== currentUser.email &&
+        (r.wodId ? r.wodId === wod.id : !(r.customWodName || r.customWodType))
+      );
 
-    if (athleteResults.length > 0) {
-      alert(`Cannot delete this WOD. ${athleteResults.length} athlete${athleteResults.length !== 1 ? 's have' : ' has'} already logged results for this workout.`);
-      return;
+      if (athleteResults.length > 0) {
+        alert(`Cannot delete this WOD. ${athleteResults.length} athlete${athleteResults.length !== 1 ? 's have' : ' has'} already logged results for this workout.`);
+        return;
+      }
+
+      setShowDeleteWODConfirm({ ...wod });
+    } catch (error) {
+      alert('Error checking WOD results: ' + error.message);
     }
-
-    setShowDeleteWODConfirm({ ...wod });
   };
 
   const confirmDeleteWOD = async (workoutResults, onSuccess) => {
@@ -243,7 +266,9 @@ export function useWorkouts(currentUser) {
 
   const updateMovement = (index, field, value) => {
     const updated = [...newWOD.movements];
-    updated[index][field] = value;
+    // Replace the object rather than mutate it — when editing, these objects
+    // are shared with the WOD card rendered in the list
+    updated[index] = { ...updated[index], [field]: value };
     setNewWOD({ ...newWOD, movements: updated });
   };
 
@@ -252,20 +277,11 @@ export function useWorkouts(currentUser) {
     updatedInput[index] = value;
     setMovementInput(updatedInput);
 
-    if (value.trim()) {
-      const filtered = STANDARD_MOVEMENTS.filter(m =>
-        m.toLowerCase().includes(value.toLowerCase())
-      );
-      setFilteredMovements(filtered);
-
-      const updatedDropdown = [...showMovementDropdown];
-      updatedDropdown[index] = true;
-      setShowMovementDropdown(updatedDropdown);
-    } else {
-      const updatedDropdown = [...showMovementDropdown];
-      updatedDropdown[index] = false;
-      setShowMovementDropdown(updatedDropdown);
-    }
+    // Suggestions are derived per-row from movementInput in the component —
+    // a single shared filtered list showed another row's matches on refocus
+    const updatedDropdown = [...showMovementDropdown];
+    updatedDropdown[index] = !!value.trim();
+    setShowMovementDropdown(updatedDropdown);
 
     updateMovement(index, 'name', value);
   };
@@ -314,7 +330,6 @@ export function useWorkouts(currentUser) {
     newWOD, setNewWOD,
     movementInput, setMovementInput,
     showMovementDropdown, setShowMovementDropdown,
-    filteredMovements,
     editingWOD, setEditingWOD,
     showDeleteWODConfirm, setShowDeleteWODConfirm,
     wodPhotoData, setWodPhotoData,
@@ -325,6 +340,7 @@ export function useWorkouts(currentUser) {
     loadAllWODs,
     loadMissedWODs,
     postWOD,
+    resetWODForm,
     editWOD,
     deleteWOD,
     confirmDeleteWOD,

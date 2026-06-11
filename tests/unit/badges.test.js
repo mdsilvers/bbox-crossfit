@@ -18,101 +18,30 @@ function makeResults(count, startDate = '2026-01-01') {
   return results;
 }
 
-/**
- * Get the source's "current Monday key" — replicating the exact same logic
- * as calculateStreakWeeks uses internally so our test dates will match.
- *
- * The source computes:
- *   let currentMonday = new Date(now.setDate(diff));
- *   currentMonday.setHours(0, 0, 0, 0);
- *   const key = currentMonday.toISOString().split('T')[0];
- *
- * In timezone-offset environments toISOString() may return a different calendar
- * date than the local date.  We replicate identically so our weekMap entries match.
- */
-function getSourceCurrentMondayKey() {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const currentMonday = new Date(now.setDate(diff));
-  currentMonday.setHours(0, 0, 0, 0);
-  return currentMonday.toISOString().split('T')[0];
+// Format a Date as YYYY-MM-DD in local time — matches the source's week keys
+function toLocalKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/**
- * Get the source's weekMap key for a result whose `date` field maps to the
- * Monday N weeks before the current week.
- *
- * The source maps results via:
- *   const d = new Date(r.date + 'T00:00:00');
- *   const day = d.getDay();
- *   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
- *   const monday = new Date(d.setDate(diff));
- *   const key = monday.toISOString().split('T')[0];
- *
- * We need result dates that, when fed through the above, produce the same key
- * as getSourceCurrentMondayKey() minus N*7 days.
- *
- * Strategy: start from a Date whose toISOString() week-Monday matches, then
- * derive actual date strings by adding days.
- */
-function getSourceMondayKeyNWeeksAgo(n) {
-  // Work backwards from the source current-monday logic
+// Local-midnight Monday of the week N weeks before the current one
+function mondayNWeeksAgo(n) {
   const now = new Date();
   const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const currentMonday = new Date(now.setDate(diff));
-  currentMonday.setHours(0, 0, 0, 0);
-  // Go back N weeks
-  currentMonday.setDate(currentMonday.getDate() - 7 * n);
-  return currentMonday.toISOString().split('T')[0];
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - day + (day === 0 ? -6 : 1) - 7 * n);
+  monday.setHours(0, 0, 0, 0);
+  return monday;
 }
 
-/**
- * Given a source Monday key (may be a UTC-shifted date), return 3 result date
- * strings such that when the source processes them via `new Date(date + 'T00:00:00')`
- * and computes their Monday key, the result equals `mondayKey`.
- *
- * We achieve this by finding actual local dates whose ISO-Monday key equals `mondayKey`.
- * We do this by creating dates that, when treated as local midnight, compute back to
- * the desired Monday key.
- *
- * Simpler approach: just use the Monday key date +0, +1, +2 days as local strings,
- * which will map back to that Monday or the next depending on offset.
- * Instead, we find the actual local Monday by trial: try candidate dates until
- * the source's weekMap logic maps them to `mondayKey`.
- */
-function resultDatesForSourceWeek(mondayKey, count = 3) {
-  // The source Monday key was computed as:
-  //   localMondayMidnight.toISOString() → may shift by ±1 day
-  // We need dates d such that:
-  //   new Date(d + 'T00:00:00') → monday computation → toISOString() === mondayKey
-  //
-  // Approach: iterate through 7 candidate dates near mondayKey and find which ones
-  // map to mondayKey when processed by the source's weekMap logic.
-  const candidates = [];
-  // Try dates from mondayKey-1 through mondayKey+7
-  const base = new Date(mondayKey + 'T00:00:00');
-  // Shift by timezone offset to get local midnight
-  const tzOffsetMs = base.getTimezoneOffset() * 60 * 1000;
-
-  // Try dates in the local week corresponding to mondayKey
-  // We search a ±2 day window around mondayKey and the following 6 days
-  for (let offset = -1; offset <= 8; offset++) {
-    const candidate = new Date(base.getTime() + offset * 24 * 60 * 60 * 1000);
-    const candidateStr = candidate.toISOString().split('T')[0];
-    // Simulate source weekMap logic
-    const d = new Date(candidateStr + 'T00:00:00');
-    const day = d.getDay();
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(d.setDate(diff));
-    const key = monday.toISOString().split('T')[0];
-    if (key === mondayKey) {
-      candidates.push(candidateStr);
-      if (candidates.length === count) break;
-    }
-  }
-  return candidates;
+// `count` result date strings (Mon, Tue, …) inside the week N weeks ago. Keep
+// count <= 7 so the dates stay within a single Mon-Sun week.
+function resultDatesForWeek(weeksAgo, count = 3) {
+  const monday = mondayNWeeksAgo(weeksAgo);
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return toLocalKey(d);
+  });
 }
 
 // ─── BADGES constant ──────────────────────────────────────────────────────────
@@ -165,64 +94,62 @@ describe('calculateStreakWeeks', () => {
     expect(calculateStreakWeeks(undefined)).toBe(0);
   });
 
-  it('returns 0 when current week has fewer than 3 workouts', () => {
-    const currentMondayKey = getSourceCurrentMondayKey();
-    const dates = resultDatesForSourceWeek(currentMondayKey, 2);
-    const results = dates.map(d => makeResult(d));
+  it('returns 0 when current week has fewer than 3 workouts and no prior weeks', () => {
+    const results = resultDatesForWeek(0, 2).map(d => makeResult(d));
     expect(calculateStreakWeeks(results)).toBe(0);
   });
 
   it('returns 1 for current week with exactly 3 workouts', () => {
-    const currentMondayKey = getSourceCurrentMondayKey();
-    const dates = resultDatesForSourceWeek(currentMondayKey, 3);
-    const results = dates.map(d => makeResult(d));
+    const results = resultDatesForWeek(0, 3).map(d => makeResult(d));
     expect(calculateStreakWeeks(results)).toBe(1);
   });
 
   it('returns 1 for current week with more than 3 workouts', () => {
-    const currentMondayKey = getSourceCurrentMondayKey();
-    const dates = resultDatesForSourceWeek(currentMondayKey, 5);
-    const results = dates.map(d => makeResult(d));
+    const results = resultDatesForWeek(0, 5).map(d => makeResult(d));
     expect(calculateStreakWeeks(results)).toBe(1);
   });
 
   it('returns 2 for two consecutive weeks (current + last) with 3+ workouts each', () => {
-    const week0Key = getSourceMondayKeyNWeeksAgo(0);
-    const week1Key = getSourceMondayKeyNWeeksAgo(1);
-    const dates0 = resultDatesForSourceWeek(week0Key, 3);
-    const dates1 = resultDatesForSourceWeek(week1Key, 3);
-    const results = [...dates0, ...dates1].map(d => makeResult(d));
+    const results = [
+      ...resultDatesForWeek(0, 3),
+      ...resultDatesForWeek(1, 3),
+    ].map(d => makeResult(d));
     expect(calculateStreakWeeks(results)).toBe(2);
   });
 
   it('returns 4 for four consecutive weeks with 3+ workouts each', () => {
-    const allDates = [
-      ...resultDatesForSourceWeek(getSourceMondayKeyNWeeksAgo(0), 3),
-      ...resultDatesForSourceWeek(getSourceMondayKeyNWeeksAgo(1), 3),
-      ...resultDatesForSourceWeek(getSourceMondayKeyNWeeksAgo(2), 3),
-      ...resultDatesForSourceWeek(getSourceMondayKeyNWeeksAgo(3), 3),
-    ];
-    const results = allDates.map(d => makeResult(d));
+    const results = [
+      ...resultDatesForWeek(0, 3),
+      ...resultDatesForWeek(1, 3),
+      ...resultDatesForWeek(2, 3),
+      ...resultDatesForWeek(3, 3),
+    ].map(d => makeResult(d));
     expect(calculateStreakWeeks(results)).toBe(4);
   });
 
-  it('breaks streak if a week in the middle has fewer than 3 workouts', () => {
+  it('breaks streak if a completed week has fewer than 3 workouts', () => {
     // Current week: 3, 1 week ago: 1 (breaks streak), 2 weeks ago: 3
-    const allDates = [
-      ...resultDatesForSourceWeek(getSourceMondayKeyNWeeksAgo(0), 3),
-      ...resultDatesForSourceWeek(getSourceMondayKeyNWeeksAgo(1), 1),
-      ...resultDatesForSourceWeek(getSourceMondayKeyNWeeksAgo(2), 3),
-    ];
-    const results = allDates.map(d => makeResult(d));
+    const results = [
+      ...resultDatesForWeek(0, 3),
+      ...resultDatesForWeek(1, 1),
+      ...resultDatesForWeek(2, 3),
+    ].map(d => makeResult(d));
     expect(calculateStreakWeeks(results)).toBe(1);
   });
 
-  it('returns 0 when only past weeks have 3+ workouts but current week does not', () => {
-    const allDates = [
-      ...resultDatesForSourceWeek(getSourceMondayKeyNWeeksAgo(1), 3),
-      ...resultDatesForSourceWeek(getSourceMondayKeyNWeeksAgo(2), 3),
-    ];
-    const results = allDates.map(d => makeResult(d));
+  it('keeps the streak from completed weeks while the current week is still in progress', () => {
+    // The in-progress week must not zero the streak (it used to reset every
+    // Monday morning) — completed consecutive weeks still count
+    const results = [
+      ...resultDatesForWeek(1, 3),
+      ...resultDatesForWeek(2, 3),
+    ].map(d => makeResult(d));
+    expect(calculateStreakWeeks(results)).toBe(2);
+  });
+
+  it('returns 0 when the last completed week broke the streak', () => {
+    // 1 week ago: 0 workouts (gap), 2 weeks ago: 3 — gap kills the streak
+    const results = resultDatesForWeek(2, 3).map(d => makeResult(d));
     expect(calculateStreakWeeks(results)).toBe(0);
   });
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import * as db from '../lib/database';
 import { compareScores } from '../lib/score-utils';
@@ -9,7 +9,9 @@ export function useLeaderboard(date, wodType, wodId) {
   const [genderFilter, setGenderFilter] = useState('all');
   const channelRef = useRef(null);
 
-  const fetchLeaderboard = async () => {
+  // Memoized so the realtime callback and refreshLeaderboard always close
+  // over the current date/wodId instead of a stale render's values
+  const fetchLeaderboard = useCallback(async () => {
     if (!date) return;
     setLoading(true);
     try {
@@ -20,7 +22,7 @@ export function useLeaderboard(date, wodType, wodId) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [date, wodId]);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -31,8 +33,11 @@ export function useLeaderboard(date, wodType, wodId) {
     }
 
     if (date) {
+      // Channel name includes wodId — two leaderboards on the same date
+      // (e.g. mens + womens WODs) would otherwise share a channel and the
+      // first unmount would kill the other's subscription
       const channel = supabase
-        .channel(`leaderboard-${date}`)
+        .channel(`leaderboard-${date}-${wodId || 'all'}`)
         .on(
           'postgres_changes',
           {
@@ -56,7 +61,7 @@ export function useLeaderboard(date, wodType, wodId) {
         channelRef.current = null;
       }
     };
-  }, [date, wodId]);
+  }, [date, wodId, fetchLeaderboard]);
 
   // Filter by gender, then split into ranked (has score) and unranked (no score)
   const genderFiltered = results.filter(r => {

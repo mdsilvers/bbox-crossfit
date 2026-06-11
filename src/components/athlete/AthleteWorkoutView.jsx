@@ -54,7 +54,7 @@ export default function AthleteWorkoutView({
                 <div className="flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
                   <span className="font-semibold">
-                    Editing workout from {new Date(editingWorkout.date).toLocaleDateString('en-US', {
+                    Editing workout from {new Date(editingWorkout.date + 'T00:00:00').toLocaleDateString('en-US', {
                       weekday: 'short',
                       month: 'short',
                       day: 'numeric'
@@ -314,7 +314,12 @@ export default function AthleteWorkoutView({
             <label className="block text-slate-300 mb-2">Workout Type</label>
             <select
               value={customWod.type}
-              onChange={(e) => setCustomWod({ ...customWod, type: e.target.value })}
+              onChange={(e) => {
+                setCustomWod({ ...customWod, type: e.target.value });
+                // Clear the score — the old value can parse as nonsense under
+                // the new type (e.g. a 100kg weight becomes 100 AMRAP rounds)
+                setMyResult(prev => ({ ...prev, time: '' }));
+              }}
               className="w-full bg-slate-700 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-red-500 focus:outline-none"
             >
               <option value="For Time">For Time</option>
