@@ -3,6 +3,7 @@ import { Plus, Trash2, Calendar, Image } from 'lucide-react';
 import ScoreInput from '../ScoreInput';
 import RxToggle from '../shared/RxToggle';
 import StrengthPartDisplay from '../shared/StrengthPartDisplay';
+import LazyPhoto from '../shared/LazyPhoto';
 import { STANDARD_MOVEMENTS } from '../../lib/constants';
 import { isBenchmarkWod, getBenchmarkByName } from '../../lib/benchmarks';
 
@@ -155,12 +156,14 @@ export default function AthleteWorkoutView({
             ))}
           </div>
 
-          {todayWOD?.photoData && !editingWorkout && (
-            <img
-              src={todayWOD.photoData}
-              alt="WOD Board"
-              className="w-full rounded-lg max-h-64 object-cover mb-4 cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => setPhotoModalUrl(todayWOD.photoData)}
+          {(todayWOD?.hasPhoto || todayWOD?.photoData) && !editingWorkout && (
+            <LazyPhoto
+              table="wods"
+              id={todayWOD.id}
+              hasPhoto={todayWOD.hasPhoto}
+              photoData={todayWOD.photoData}
+              onOpen={setPhotoModalUrl}
+              className="w-full h-40 mb-4"
             />
           )}
 

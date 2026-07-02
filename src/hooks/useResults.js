@@ -73,16 +73,11 @@ export function useResults(currentUser) {
         const matchesCurrentWod = isCustom || !currentWOD || todayResult.wodId === currentWOD.id;
 
         if (matchesCurrentWod) {
-          // Photo was stripped from the list query — fetch so the form can keep it.
-          let photoData = todayResult.photoData;
-          if (!photoData && todayResult.hasPhoto) {
-            try { photoData = await db.getResultPhoto(todayResult.id); } catch { /* non-fatal */ }
-          }
           setMyResult({
             time: todayResult.time,
             movements: todayResult.movements,
             notes: todayResult.notes,
-            photoData,
+            photoData: todayResult.photoData || null,
             rx: todayResult.rx ?? 'rx',
             strengthScore: todayResult.strengthScore || '',
             existingResultId: todayResult.id,
@@ -90,6 +85,20 @@ export function useResults(currentUser) {
             customWodName: todayResult.customWodName,
             customWodType: todayResult.customWodType,
           });
+          // Photo was stripped from the list query — patch it in without
+          // blocking the dashboard render on a base64 download.
+          if (!todayResult.photoData && todayResult.hasPhoto) {
+            db.getResultPhoto(todayResult.id)
+              .then(photoData => {
+                if (!photoData) return;
+                setMyResult(prev =>
+                  prev.existingResultId === todayResult.id && !prev.photoData
+                    ? { ...prev, photoData }
+                    : prev
+                );
+              })
+              .catch(() => { /* non-fatal */ });
+          }
         } else if (currentWOD) {
           // Result exists for today but for a different WOD — show current WOD
           // as not completed. Keep existingResultId so logging updates rather

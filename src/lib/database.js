@@ -81,9 +81,11 @@ export async function getProfile(userId) {
 // ==================== WOD FUNCTIONS ====================
 
 export async function getWodByDateAndGroup(date, group) {
+  // List columns, not * — the base64 photo_url would otherwise download on
+  // the blocking dashboard load path; the UI lazy-fetches it via has_photo
   const { data, error } = await supabase
     .from('wods')
-    .select('*')
+    .select(WOD_LIST_COLUMNS)
     .eq('date', date)
     .eq('group_type', group)
     .maybeSingle();
@@ -99,7 +101,7 @@ export async function getTodayWod(userGroup, role) {
   if (role === 'coach') {
     const { data, error } = await supabase
       .from('wods')
-      .select('*')
+      .select(WOD_LIST_COLUMNS)
       .eq('date', today)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -894,8 +896,9 @@ export function profileToUser(profile) {
 }
 
 // Transform Supabase WOD to app WOD format.
-// `photoData` is populated on single-row queries (select * on getTodayWod etc.)
-// but omitted on list queries; `hasPhoto` is always populated (generated column).
+// `photoData` is only populated by explicit photo fetches (getWodPhoto) —
+// every query path selects list columns so base64 photos never block loads;
+// `hasPhoto` is always populated (generated column).
 export function wodToAppFormat(wod) {
   if (!wod) return null;
   return {
