@@ -66,7 +66,6 @@ test.describe('History and score display', () => {
 
     // The progress view should have rendered something (no crash)
     // Check for any of the section headings that always render
-    const progressContent = page.locator('text=PR Trends, text=Activity, text=Recent PRs, text=Week').first();
     // At minimum the container should be present without throwing
     const container = page.locator('.min-h-screen');
     await expect(container).toBeVisible();

@@ -1,8 +1,63 @@
 import { test, expect } from '@playwright/test';
-import { login, logout, navigateToTab } from '../helpers.js';
+import { createClient } from '@supabase/supabase-js';
+import { login, navigateToTab } from '../helpers.js';
 
 const PROGRAM_NAME = 'E2E Back Squat Cycle';
 const EXERCISE = 'Back Squat';
+const TEST_ATHLETE_EMAIL = process.env.TEST_ATHLETE_EMAIL || 'testathlete@bbox.test';
+const TEST_ATHLETE_PASSWORD = process.env.TEST_ATHLETE_PASSWORD || 'TestAthlete123!';
+
+async function createSignedInAthleteClient() {
+  const supabase = createClient(
+    process.env.VITE_SUPABASE_URL,
+    process.env.VITE_SUPABASE_ANON_KEY
+  );
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: TEST_ATHLETE_EMAIL,
+    password: TEST_ATHLETE_PASSWORD,
+  });
+  if (error) throw error;
+
+  return { supabase, athleteId: data.user.id };
+}
+
+async function resetAthleteStrengthState() {
+  const { supabase, athleteId } = await createSignedInAthleteClient();
+
+  await supabase.from('results').delete().eq('athlete_id', athleteId);
+  const { data: program, error: programError } = await supabase
+    .from('strength_programs')
+    .select('id')
+    .eq('status', 'active')
+    .maybeSingle();
+  if (programError) throw programError;
+
+  if (program?.id) {
+    const { error } = await supabase
+      .from('athlete_enrollments')
+      .update({ current_session: 1 })
+      .eq('program_id', program.id)
+      .eq('athlete_id', athleteId);
+    if (error) throw error;
+  }
+
+  await supabase.auth.signOut();
+}
+
+async function getAthleteCurrentSession() {
+  const { supabase, athleteId } = await createSignedInAthleteClient();
+  const { data, error } = await supabase
+    .from('athlete_enrollments')
+    .select('current_session, strength_programs!program_id(status)')
+    .eq('athlete_id', athleteId)
+    .eq('strength_programs.status', 'active')
+    .maybeSingle();
+  await supabase.auth.signOut();
+
+  if (error) throw error;
+  return data?.current_session ?? null;
+}
 
 /**
  * Helper: register a dialog handler before an action to avoid click-hang.
@@ -243,6 +298,82 @@ test.describe('Strength Program', () => {
 
     // Since athlete enrolled with 1RM of 120 kg, should see working weight
     await expect(page.locator('text=Working weight').first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test('coach editing attached WOD keeps Part A attached', async ({ page }) => {
+    await login(page, 'coach');
+    await navigateToTab(page, 'Program');
+
+    const editWodBtn = page.locator('button:has-text("Edit WOD")').first();
+    await editWodBtn.scrollIntoViewIfNeeded();
+    await editWodBtn.click();
+
+    const attachCheckbox = page.locator('label:has-text("Attach:") input[type="checkbox"]');
+    await expect(attachCheckbox).toBeChecked({ timeout: 10000 });
+
+    captureNextDialog(page);
+    await page.locator('button:has-text("Update WOD")').scrollIntoViewIfNeeded();
+    await page.locator('button:has-text("Update WOD")').click();
+
+    await navigateToTab(page, 'Home');
+    await expect(page.locator('text=Part A').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.locator(`text=${EXERCISE}`).first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test('athlete strength session advances only on first log, not update', async ({ page }) => {
+    await resetAthleteStrengthState();
+
+    await login(page, 'athlete');
+    await page.waitForTimeout(2000);
+
+    const logButton = page.locator('button:has-text("Log My Workout")').first();
+    await logButton.scrollIntoViewIfNeeded();
+    await expect(logButton).toBeVisible({ timeout: 10000 });
+    await logButton.click();
+
+    const strengthWeightInput = page.locator('input[placeholder^="Target:"], input[placeholder="Weight in kg"]').first();
+    await expect(strengthWeightInput).toBeVisible({ timeout: 10000 });
+    await strengthWeightInput.fill('85');
+
+    await page.locator('input[placeholder="MM"]').fill('8');
+    await page.locator('input[placeholder="SS"]').fill('15');
+
+    const submitButton = page.locator('button:has-text("Log Workout")').first();
+    await expect(submitButton).toBeVisible({ timeout: 5000 });
+    await submitButton.click();
+
+    await expect.poll(getAthleteCurrentSession, { timeout: 10000 }).toBe(2);
+
+    const modalCloseButton = page.locator('.fixed.inset-0 button').first();
+    if (await modalCloseButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await modalCloseButton.click();
+    }
+
+    await navigateToTab(page, 'Home');
+    const editButton = page.locator('button:has-text("Edit My Results")').first();
+    await editButton.scrollIntoViewIfNeeded();
+    await expect(editButton).toBeVisible({ timeout: 10000 });
+    await editButton.click();
+
+    await page.locator('input[placeholder="SS"]').fill('20');
+    const updateButton = page.locator('button:has-text("Update Workout")').first();
+    await expect(updateButton).toBeVisible({ timeout: 5000 });
+    await updateButton.click();
+
+    await expect.poll(getAthleteCurrentSession, { timeout: 10000 }).toBe(2);
+  });
+
+  test('coach cannot delete WOD with linked athlete result', async ({ page }) => {
+    await login(page, 'coach');
+    await navigateToTab(page, 'Program');
+
+    const getMsg = captureNextDialog(page);
+    const deleteBtn = page.locator('button:has-text("Delete")').first();
+    await deleteBtn.scrollIntoViewIfNeeded();
+    await deleteBtn.click();
+    await page.waitForTimeout(500);
+
+    expect(getMsg()).toContain('Cannot delete this WOD');
   });
 
   test('coach override rejects invalid session number', async ({ page }) => {

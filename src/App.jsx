@@ -1,5 +1,5 @@
 import React, { lazy, Suspense } from 'react';
-import { useAuth } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContextValue';
 import AuthScreen from './components/auth/AuthScreen';
 import BBoxLogo from './components/shared/BBoxLogo';
 

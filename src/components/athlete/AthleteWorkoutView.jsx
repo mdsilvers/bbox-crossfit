@@ -15,7 +15,6 @@ export default function AthleteWorkoutView({
   customWod,
   setCustomWod,
   customMovementInput,
-  setCustomMovementInput,
   showCustomMovementDropdown,
   setShowCustomMovementDropdown,
   customWodNameError,
@@ -33,15 +32,11 @@ export default function AthleteWorkoutView({
   updateCustomMovement,
   handleCustomMovementInput,
   selectCustomMovement,
-  photoModalUrl,
   setPhotoModalUrl,
-  navigate,
   activeProgram,
-  programSessions,
   myEnrollment,
   getMySession,
   getMyWorkingWeight,
-  advanceMySession,
 }) {
   return (
     <>

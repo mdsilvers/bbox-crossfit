@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { X, Users } from 'lucide-react';
-import { formatScore, getScoreLabel, getScoreCategory } from '../../lib/score-utils';
+import { formatScore, getScoreLabel } from '../../lib/score-utils';
 import { useLeaderboard } from '../../hooks/useLeaderboard';
 import LeaderboardRow from '../social/LeaderboardRow';
 import StrengthPartDisplay from './StrengthPartDisplay';
@@ -28,14 +28,11 @@ export default function PostWodSummary({
   enrollment,
 }) {
   const wodType = isCustomWorkout ? result?.customWodType : wod?.type;
-  const wodName = isCustomWorkout
-    ? (result?.customWodName || 'Custom Workout')
-    : (wod?.name || 'Daily WOD');
   const date = result?.date || wod?.date;
 
   const showLeaderboard = !isCustomWorkout && wod && isRankable(wodType);
 
-  const { leaderboardResults, rankedCount, totalParticipants, loading, genderFilter, setGenderFilter } =
+  const { leaderboardResults, rankedCount, totalParticipants, genderFilter, setGenderFilter } =
     useLeaderboard(showLeaderboard ? date : null, wodType, wod?.id);
 
   // Load reactions for leaderboard results
@@ -57,9 +54,6 @@ export default function PostWodSummary({
   const participationCount = totalParticipants;
 
   // Find user's rank (only within ranked results)
-  const userIdx = leaderboardResults.findIndex(r => r.athleteId === currentUser?.id);
-  const userRank = userIdx >= 0 && userIdx < rankedCount ? userIdx + 1 : 0;
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" style={{ backgroundColor: 'rgba(28, 32, 39, 0.95)' }}>
       <div className="max-w-2xl mx-auto px-4 py-6 pb-24 min-h-screen flex flex-col">

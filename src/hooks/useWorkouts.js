@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as db from '../lib/database';
 import { getLocalToday } from '../lib/constants';
+import { getBlockingWodResults, toEditableWod } from '../lib/workout-flow';
 
 export function useWorkouts(currentUser) {
   const [allWODs, setAllWODs] = useState([]);
@@ -171,20 +172,7 @@ export function useWorkouts(currentUser) {
 
   const editWOD = async (wod, navigate) => {
     setEditingWOD(wod);
-    setNewWOD({
-      name: wod.name || '',
-      date: wod.date,
-      type: wod.type,
-      group: wod.group,
-      // Deep-copy movements: form edits would otherwise mutate the WOD
-      // object still rendered in the list (visible even after Cancel)
-      movements: wod.movements.map(m => ({ ...m })),
-      notes: wod.notes,
-      // Without these, saving an edit strips the attached strength program
-      // (updateWod coerces missing fields to null)
-      strengthProgramId: wod.strengthProgramId || null,
-      programSessionOverride: wod.programSessionOverride || null,
-    });
+    setNewWOD(toEditableWod(wod));
     // Photo stripped from list query — fetch on demand so it isn't lost on save.
     let photoData = wod.photoData;
     if (!photoData && wod.hasPhoto) {
@@ -211,10 +199,7 @@ export function useWorkouts(currentUser) {
     try {
       const resultsData = await db.getResultsForDate(wod.date);
       const results = resultsData.map(r => db.resultToAppFormat(r));
-      const athleteResults = results.filter(r =>
-        r.athleteEmail !== currentUser.email &&
-        (r.wodId ? r.wodId === wod.id : !(r.customWodName || r.customWodType))
-      );
+      const athleteResults = getBlockingWodResults(results, currentUser, wod);
 
       if (athleteResults.length > 0) {
         alert(`Cannot delete this WOD. ${athleteResults.length} athlete${athleteResults.length !== 1 ? 's have' : ' has'} already logged results for this workout.`);

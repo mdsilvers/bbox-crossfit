@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContextValue';
 import BBoxLogo from '../shared/BBoxLogo';
 import ForgotPassword from './ForgotPassword';
 import LoginForm from './LoginForm';

@@ -1,6 +1,5 @@
 import { test, expect, devices } from '@playwright/test';
 import { login } from '../helpers.js';
-import { getLocalToday } from '../helpers.js';
 
 /**
  * E2E tests for athlete workout logging.

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 import { LogOut, Clock, Calendar, Users, TrendingUp } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContextValue';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useResults } from '../../hooks/useResults';
 import { useBenchmarkPRs } from '../../hooks/useBenchmarkPRs';
@@ -8,6 +8,7 @@ import { useStrengthProgram } from '../../hooks/useStrengthProgram';
 import { useSocial } from '../../hooks/useSocial';
 import { useBadges } from '../../hooks/useBadges';
 import { calculateStats } from '../../lib/stats';
+import { shouldAdvanceStrengthSession } from '../../lib/workout-flow';
 import BBoxLogo from '../shared/BBoxLogo';
 import PhotoModal from '../shared/PhotoModal';
 import PostWodSummary from '../shared/PostWodSummary';
@@ -84,8 +85,8 @@ export default function CoachDashboard() {
     showDeleteConfirm, setShowDeleteConfirm,
     isCustomWorkout,
     customWod, setCustomWod,
-    customMovementInput, setCustomMovementInput,
-    showCustomMovementDropdown, setShowCustomMovementDropdown,
+    customMovementInput,
+    showCustomMovementDropdown,
     customWodNameError, setCustomWodNameError,
     photoModalUrl, setPhotoModalUrl,
     postWodSummaryData, setPostWodSummaryData,
@@ -163,12 +164,12 @@ export default function CoachDashboard() {
   }, [currentUser]);
 
   // Lazy-load Athletes-tab data (badge list for all users) on first visit.
-  const [athletesTabLoaded, setAthletesTabLoaded] = useState(false);
+  const athletesTabLoaded = useRef(false);
   useEffect(() => {
-    if (!currentUser || athletesTabLoaded || coachView !== 'athletes') return;
+    if (!currentUser || athletesTabLoaded.current || coachView !== 'athletes') return;
+    athletesTabLoaded.current = true;
     badgesHook.loadAllUserBadges();
-    setAthletesTabLoaded(true);
-  }, [coachView, currentUser, athletesTabLoaded]);
+  }, [coachView, currentUser, badgesHook]);
 
   const stats = useMemo(
     () => calculateStats(workoutResults, currentUser),
@@ -186,14 +187,13 @@ export default function CoachDashboard() {
     const prs = calculateBenchmarkPRs(freshResults, allWODs);
     setBenchmarkPRs(prs);
     await badgesHook.checkAndAwardBadges(freshResults, allWODs, prs);
-    // Advance the strength session only on the FIRST log of today's program
-    // WOD — editing a result (or logging a missed WOD) must not advance it
-    if (
-      !logMeta?.isEdit &&
-      logMeta?.wodId === todayWOD?.id &&
-      todayWOD?.strengthProgramId &&
-      strengthProgram.myEnrollment
-    ) {
+    if (shouldAdvanceStrengthSession({
+      activeProgram: strengthProgram.activeProgram,
+      enrollment: strengthProgram.myEnrollment,
+      todayWOD,
+      wodId: logMeta?.wodId,
+      isEdit: logMeta?.isEdit,
+    })) {
       await strengthProgram.advanceMySession();
       await strengthProgram.loadMyEnrollment(strengthProgram.activeProgram?.id);
     }

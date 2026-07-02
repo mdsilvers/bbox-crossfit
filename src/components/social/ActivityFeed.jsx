@@ -98,11 +98,7 @@ export default function ActivityFeed({ currentUser, allWODs, reactions = {}, onT
     return () => { clearTimeout(t); document.removeEventListener('touchstart', close); };
   }, [pickerResultId]);
 
-  useEffect(() => {
-    loadFeed();
-  }, []);
-
-  const loadFeed = async () => {
+  const loadFeed = useCallback(async () => {
     setLoading(true);
     try {
       const items = [];
@@ -154,7 +150,11 @@ export default function ActivityFeed({ currentUser, allWODs, reactions = {}, onT
     } finally {
       setLoading(false);
     }
-  };
+  }, [allWODs, currentUser?.id, loadReactionsForResults]);
+
+  useEffect(() => {
+    loadFeed();
+  }, [loadFeed]);
 
   const handleTap = useCallback((resultId) => {
     if (!onToggleReaction) return;

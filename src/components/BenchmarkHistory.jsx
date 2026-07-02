@@ -8,13 +8,25 @@ import {
 } from '../lib/score-utils';
 import { getBenchmarkByName } from '../lib/benchmarks';
 
+function BenchmarkTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+  const data = payload[0].payload;
+  return (
+    <div className="bg-slate-700 border border-slate-600 rounded-lg p-3 shadow-lg">
+      <p className="text-white font-semibold">{data.dateLabel}</p>
+      <p className="text-red-400">{data.displayScore}</p>
+      {data.notes && <p className="text-slate-400 text-xs mt-1">{data.notes}</p>}
+    </div>
+  );
+}
+
 export default function BenchmarkHistory({ benchmarkName, results, allWODs, onBack }) {
   const benchmark = getBenchmarkByName(benchmarkName);
   const wodType = benchmark?.type || 'For Time';
   const category = getScoreCategory(wodType);
   const lowerIsBetter = isLowerBetter(wodType);
 
-  const { chartData, bestResult, firstResult, improvement, attempts } = useMemo(() => {
+  const { chartData, bestResult, improvement, attempts } = useMemo(() => {
     if (!results || results.length === 0) {
       return { chartData: [], bestResult: null, firstResult: null, improvement: null, attempts: [] };
     }
@@ -91,18 +103,6 @@ export default function BenchmarkHistory({ benchmarkName, results, allWODs, onBa
       attempts: benchmarkResults,
     };
   }, [results, allWODs, benchmarkName, wodType, category, lowerIsBetter]);
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (!active || !payload?.length) return null;
-    const data = payload[0].payload;
-    return (
-      <div className="bg-slate-700 border border-slate-600 rounded-lg p-3 shadow-lg">
-        <p className="text-white font-semibold">{data.dateLabel}</p>
-        <p className="text-red-400">{data.displayScore}</p>
-        {data.notes && <p className="text-slate-400 text-xs mt-1">{data.notes}</p>}
-      </div>
-    );
-  };
 
   const formatYAxis = (value) => {
     if (category === 'time') {
@@ -189,7 +189,7 @@ export default function BenchmarkHistory({ benchmarkName, results, allWODs, onBa
                   tickLine={false}
                   tickFormatter={formatYAxis}
                 />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<BenchmarkTooltip />} />
                 <Line
                   type="monotone"
                   dataKey="chartValue"

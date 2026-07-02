@@ -1,38 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login, navigateToTab, getLocalToday } from '../helpers.js';
-
-/**
- * Helper: Post a WOD via the form.
- * Handles scrolling, dialog acceptance, and waits for form to close.
- */
-async function postWod(page, { movement, reps, group }) {
-  const newWodBtn = page.locator('button:has-text("New WOD")');
-  await newWodBtn.scrollIntoViewIfNeeded();
-  await newWodBtn.click();
-  await expect(page.locator('text=Post New WOD')).toBeVisible({ timeout: 5000 });
-
-  // Set group if specified — Group is the 3rd select (Benchmark=0, Type=1, Group=2)
-  if (group) {
-    await page.locator('select').nth(2).selectOption({ value: group });
-  }
-
-  await page.fill('input[placeholder="Type to search movements..."]', movement);
-  await page.fill('input[placeholder="Reps (e.g., 21-15-9)"]', reps);
-
-  // Set up dialog handler as promise BEFORE clicking
-  const dialogPromise = page.waitForEvent('dialog');
-
-  const postBtn = page.locator('button:has-text("Post WOD")');
-  await postBtn.scrollIntoViewIfNeeded();
-  await postBtn.click();
-
-  // Wait for and accept the dialog
-  const dialog = await dialogPromise;
-  await dialog.accept();
-
-  // Wait for form to close
-  await page.waitForTimeout(1000);
-}
+import { login, navigateToTab } from '../helpers.js';
 
 test.describe('Coach WOD Management', () => {
   test('can navigate to Program tab', async ({ page }) => {

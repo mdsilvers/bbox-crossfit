@@ -12,7 +12,6 @@ export default function CoachAthleteList({
   allWODs,
   currentUser,
   allUserBadges = {},
-  photoModalUrl,
   setPhotoModalUrl,
   reactions = {},
   comments = {},

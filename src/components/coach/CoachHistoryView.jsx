@@ -16,9 +16,7 @@ export default function CoachHistoryView({
   deleteWorkout,
   showDeleteConfirm,
   setShowDeleteConfirm,
-  photoModalUrl,
   setPhotoModalUrl,
-  navigate,
   reactions = {},
   comments = {},
   onToggleReaction,
@@ -28,8 +26,6 @@ export default function CoachHistoryView({
   loadCommentsForResults,
   showWorkoutSummary,
   activeProgram,
-  programSessions,
-  myEnrollment,
 }) {
   const [coachHistorySearch, setCoachHistorySearch] = useState('');
 

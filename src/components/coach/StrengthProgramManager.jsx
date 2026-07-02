@@ -21,7 +21,6 @@ const STATUS_BADGE = {
 export default function StrengthProgramManager({
   allPrograms,
   allEnrollments,
-  loadAllPrograms,
   loadSessionsForProgram,
   loadAllEnrollments,
   createProgram,

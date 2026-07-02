@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { TrendingUp, TrendingDown, Minus, Trophy, Dumbbell, Flame, Calendar } from 'lucide-react';
-import { startOfWeek, endOfWeek, subWeeks, isWithinInterval, parseISO, differenceInWeeks, isBefore } from 'date-fns';
-import { getScoreCategory, compareScores } from '../lib/score-utils';
+import { TrendingUp, TrendingDown, Minus, Flame, Calendar } from 'lucide-react';
+import { startOfWeek, endOfWeek, subWeeks, isWithinInterval, parseISO } from 'date-fns';
+import { compareScores } from '../lib/score-utils';
 import { isBenchmarkWod, getBenchmarkByName } from '../lib/benchmarks';
 
 export default function WeeklySummary({ workoutResults, allWODs }) {
@@ -62,7 +62,9 @@ export default function WeeklySummary({ workoutResults, allWODs }) {
           try {
             if (isWithinInterval(d, thisWeekInterval)) prsThisWeek++;
             if (isWithinInterval(d, lastWeekInterval)) prsLastWeek++;
-          } catch {}
+          } catch {
+            // Ignore invalid stored result dates.
+          }
         }
         return;
       }
@@ -78,7 +80,9 @@ export default function WeeklySummary({ workoutResults, allWODs }) {
           try {
             if (isWithinInterval(d, thisWeekInterval)) prsThisWeek++;
             if (isWithinInterval(d, lastWeekInterval)) prsLastWeek++;
-          } catch {}
+          } catch {
+            // Ignore invalid stored result dates.
+          }
         }
       }
     });

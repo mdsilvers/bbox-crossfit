@@ -3,11 +3,11 @@ import { TrendingUp, Trophy, Flame, Activity, ChevronDown, ChevronUp } from 'luc
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import {
   format, parseISO, startOfDay, subWeeks, eachDayOfInterval,
-  startOfWeek, endOfWeek, isSameDay, differenceInCalendarDays, isWithinInterval
+  startOfWeek, isSameDay, differenceInCalendarDays, isWithinInterval
 } from 'date-fns';
 import {
   getScoreCategory, isLowerBetter, parseTimeToSeconds, amrapToNumeric,
-  formatScore, compareScores, secondsToTimeStr
+  formatScore, compareScores
 } from '../lib/score-utils';
 import { isBenchmarkWod, getBenchmarkByName } from '../lib/benchmarks';
 
@@ -139,7 +139,7 @@ function WorkoutHeatmap({ workoutResults }) {
     const weekMap = [];
     let currentWeek = [];
 
-    days.forEach((day, idx) => {
+    days.forEach((day) => {
       const dayOfWeek = day.getDay();
       const adjustedDay = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Mon=0, Sun=6
       const dateStr = format(day, 'yyyy-MM-dd');
@@ -300,7 +300,9 @@ function StatCards({ workoutResults, allWODs }) {
             if (isWithinInterval(d, { start: monthStart, end: monthEnd })) {
               prsThisMonth++;
             }
-          } catch {}
+          } catch {
+            // Ignore invalid stored result dates.
+          }
         }
       }
 
@@ -321,14 +323,16 @@ function StatCards({ workoutResults, allWODs }) {
     });
 
     // Count first attempts this month as PRs too
-    Object.entries(benchmarkGroups).forEach(([name, { results }]) => {
+    Object.entries(benchmarkGroups).forEach(([, { results }]) => {
       if (results.length === 1) {
         const d = parseISO(results[0].date);
         try {
           if (isWithinInterval(d, { start: monthStart, end: monthEnd })) {
             prsThisMonth++;
           }
-        } catch {}
+        } catch {
+          // Ignore invalid stored result dates.
+        }
       }
     });
 
@@ -512,7 +516,7 @@ function TopMovements({ workoutResults }) {
 }
 
 // ====== Main Progress Dashboard ======
-export default function ProgressDashboard({ currentUser, workoutResults, allAthleteResults, allWODs }) {
+export default function ProgressDashboard({ currentUser, workoutResults, allWODs }) {
   const [selectedBenchmark, setSelectedBenchmark] = useState(null);
 
   const handleBenchmarkClick = (name) => {

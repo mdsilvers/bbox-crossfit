@@ -29,7 +29,7 @@ const TEST_ATHLETE = {
 
 async function createTestUser(user) {
   // Try signing in first — user may already exist
-  const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+  const { data: signInData } = await supabase.auth.signInWithPassword({
     email: user.email,
     password: user.password,
   });

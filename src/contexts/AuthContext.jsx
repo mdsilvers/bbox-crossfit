@@ -1,16 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { AuthContext } from './AuthContextValue';
 import { supabase, clearSupabaseStorage, isPasswordRecoveryRedirect } from '../lib/supabase';
 import * as db from '../lib/database';
-
-const AuthContext = createContext(null);
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-}
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -61,7 +52,7 @@ export function AuthProvider({ children }) {
           const user = await loadProfile(session.user.id);
           if (mounted) setCurrentUser(user);
         }
-      } catch (error) {
+      } catch {
         // No session or expired — expected for logged-out users
         // Clear any stale session
         await supabase.auth.signOut({ scope: 'local' }).catch(() => {});

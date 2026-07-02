@@ -1,6 +1,6 @@
 import React from 'react';
 import { Dumbbell } from 'lucide-react';
-import { roundToNearest, calculateWorkingWeight } from '../../hooks/useStrengthProgram';
+import { calculateWorkingWeight } from '../../hooks/useStrengthProgram';
 
 export default function StrengthPartDisplay({
   program,        // { name, exercise, total_sessions }

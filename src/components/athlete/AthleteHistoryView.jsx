@@ -17,7 +17,6 @@ export default function AthleteHistoryView({
   deleteWorkout,
   showDeleteConfirm,
   setShowDeleteConfirm,
-  photoModalUrl,
   setPhotoModalUrl,
   navigate,
   reactions = {},
@@ -29,8 +28,6 @@ export default function AthleteHistoryView({
   loadCommentsForResults,
   showWorkoutSummary,
   activeProgram,
-  programSessions,
-  myEnrollment,
 }) {
   const [historySearch, setHistorySearch] = useState('');
 

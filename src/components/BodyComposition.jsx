@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { Plus, Trash2, ChevronDown, ChevronUp, Scale, X } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format, parseISO } from 'date-fns';
 import * as db from '../lib/database';
 import { getLocalToday } from '../lib/constants';
@@ -31,7 +31,21 @@ const emptyForm = {
   notes: '',
 };
 
+function MeasurementTooltip({ active, payload, activeFieldConfig }) {
+  if (!active || !payload?.length) return null;
+  const data = payload[0].payload;
+  return (
+    <div className="bg-slate-700 border border-slate-600 rounded-lg p-3 shadow-lg">
+      <p className="text-white text-sm font-semibold">{data.fullDate}</p>
+      <p className="text-red-400 text-sm">
+        {data.value} {activeFieldConfig?.unit}
+      </p>
+    </div>
+  );
+}
+
 export default function BodyComposition({ currentUser }) {
+  const userId = currentUser?.id;
   const [measurements, setMeasurements] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ ...emptyForm });
@@ -42,21 +56,21 @@ export default function BodyComposition({ currentUser }) {
   const [activeChartField, setActiveChartField] = useState('weight_kgs');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  useEffect(() => {
-    loadMeasurements();
-  }, [currentUser?.id]);
-
-  const loadMeasurements = async () => {
-    if (!currentUser?.id) return;
+  const loadMeasurements = useCallback(async () => {
+    if (!userId) return;
     setLoading(true);
     try {
-      const data = await db.getBodyMeasurements(currentUser.id);
+      const data = await db.getBodyMeasurements(userId);
       setMeasurements(data);
     } catch (err) {
       console.error('Error loading measurements:', err);
     }
     setLoading(false);
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    loadMeasurements();
+  }, [loadMeasurements]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -133,19 +147,6 @@ export default function BodyComposition({ currentUser }) {
       diff: latest - prev,
       pct: ((latest - prev) / prev) * 100,
     };
-  };
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (!active || !payload?.length) return null;
-    const data = payload[0].payload;
-    return (
-      <div className="bg-slate-700 border border-slate-600 rounded-lg p-3 shadow-lg">
-        <p className="text-white text-sm font-semibold">{data.fullDate}</p>
-        <p className="text-red-400 text-sm">
-          {data.value} {activeFieldConfig?.unit}
-        </p>
-      </div>
-    );
   };
 
   const latestMeasurement = measurements[0];
@@ -292,7 +293,7 @@ export default function BodyComposition({ currentUser }) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} tickLine={false} />
                 <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} domain={['auto', 'auto']} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<MeasurementTooltip activeFieldConfig={activeFieldConfig} />} />
                 <Line
                   type="monotone"
                   dataKey="value"

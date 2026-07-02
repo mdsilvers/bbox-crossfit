@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Users, ChevronDown, ChevronUp } from 'lucide-react';
-import { getScoreCategory, isLowerBetter, parseTimeToSeconds, amrapToNumeric, formatScore, compareScores } from '../lib/score-utils';
+import { formatScore, compareScores } from '../lib/score-utils';
 import { isBenchmarkWod, getBenchmarkByName } from '../lib/benchmarks';
 import * as db from '../lib/database';
 
@@ -73,9 +73,6 @@ export default function PercentileRank({ currentUser, workoutResults, allWODs, o
     Object.entries(userBenchmarks).forEach(([name, { type, best }]) => {
       const allResults = allBenchmarkResults[name];
       if (!allResults || allResults.length < 2) return;
-
-      const category = getScoreCategory(type);
-      const lowerBetter = isLowerBetter(type);
 
       // Get best score per athlete
       const athleteBests = {};

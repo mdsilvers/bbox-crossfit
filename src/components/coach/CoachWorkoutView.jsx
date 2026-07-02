@@ -7,7 +7,6 @@ import { isBenchmarkWod, getBenchmarkByName } from '../../lib/benchmarks';
 import { STANDARD_MOVEMENTS } from '../../lib/constants';
 
 export default function CoachWorkoutView({
-  currentUser,
   todayWOD,
   myResult,
   setMyResult,
@@ -32,10 +31,8 @@ export default function CoachWorkoutView({
   updateCustomMovement,
   handleCustomMovementInput,
   selectCustomMovement,
-  photoModalUrl,
   setPhotoModalUrl,
   activeProgram,
-  programSessions,
   myEnrollment,
   getMySession,
   getMyWorkingWeight,
@@ -344,10 +341,6 @@ export default function CoachWorkoutView({
                         placeholder="Movement name"
                         value={customMovementInput[idx] || ''}
                         onChange={(e) => handleCustomMovementInput(idx, e.target.value)}
-                        onFocus={() => {
-                          const newDropdowns = showCustomMovementDropdown.map((_, i) => i === idx && customMovementInput[idx]?.length > 0);
-                          // Note: This relies on the parent's setShowCustomMovementDropdown being called via handleCustomMovementInput
-                        }}
                         className="w-full bg-slate-600 text-white px-3 py-2 rounded border border-slate-500 focus:border-red-500 focus:outline-none"
                       />
                       {showCustomMovementDropdown[idx] && (

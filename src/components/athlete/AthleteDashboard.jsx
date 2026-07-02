@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { LogOut, Clock, TrendingUp } from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContextValue';
 import { useWorkouts } from '../../hooks/useWorkouts';
 import { useResults } from '../../hooks/useResults';
 import { useBenchmarkPRs } from '../../hooks/useBenchmarkPRs';
@@ -8,6 +8,7 @@ import { useSocial } from '../../hooks/useSocial';
 import { useBadges } from '../../hooks/useBadges';
 import { useStrengthProgram } from '../../hooks/useStrengthProgram';
 import { calculateStats } from '../../lib/stats';
+import { shouldAdvanceStrengthSession } from '../../lib/workout-flow';
 import BBoxLogo from '../shared/BBoxLogo';
 import PhotoModal from '../shared/PhotoModal';
 import PostWodSummary from '../shared/PostWodSummary';
@@ -134,6 +135,23 @@ export default function AthleteDashboard() {
     () => calculateStats(workoutResults, currentUser),
     [workoutResults, currentUser]
   );
+
+  const handleResultSuccess = async (freshResults, logMeta) => {
+    await loadMissedWODs(freshResults);
+    const prs = calculateBenchmarkPRs(freshResults, allWODs);
+    setBenchmarkPRs(prs);
+    await badges.checkAndAwardBadges(freshResults, allWODs, prs);
+    if (shouldAdvanceStrengthSession({
+      activeProgram: strengthProgram.activeProgram,
+      enrollment: strengthProgram.myEnrollment,
+      todayWOD,
+      wodId: logMeta?.wodId,
+      isEdit: logMeta?.isEdit,
+    })) {
+      await strengthProgram.advanceMySession();
+      await strengthProgram.loadMyEnrollment(strengthProgram.activeProgram?.id);
+    }
+  };
 
   return (
     <div className="min-h-screen min-h-dvh bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -276,23 +294,7 @@ export default function AthleteDashboard() {
               customWodNameError={customWodNameError}
               setCustomWodNameError={setCustomWodNameError}
               allWODs={allWODs}
-              logResult={() => logResult(todayWOD, allWODs, async (results, logMeta) => {
-                await loadMissedWODs(results);
-                const prs = calculateBenchmarkPRs(results, allWODs);
-                setBenchmarkPRs(prs);
-                await badges.checkAndAwardBadges(results, allWODs, prs);
-                // Advance the strength session only on the FIRST log of today's
-                // program WOD — edits and missed-WOD logs must not advance it
-                if (
-                  !logMeta?.isEdit &&
-                  logMeta?.wodId === todayWOD?.id &&
-                  todayWOD?.strengthProgramId &&
-                  strengthProgram.myEnrollment
-                ) {
-                  await strengthProgram.advanceMySession();
-                  await strengthProgram.loadMyEnrollment(strengthProgram.activeProgram?.id);
-                }
-              })}
+              logResult={() => logResult(todayWOD, allWODs, handleResultSuccess)}
               logCustomWorkout={() => logCustomWorkout(allWODs, async (results) => {
                 await loadMissedWODs(results);
                 const prs = calculateBenchmarkPRs(results, allWODs);

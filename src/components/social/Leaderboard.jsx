@@ -3,7 +3,7 @@ import { Trophy } from 'lucide-react';
 import { useLeaderboard } from '../../hooks/useLeaderboard';
 import LeaderboardRow from './LeaderboardRow';
 
-export default function Leaderboard({ date, wodType, wodName, wodId, currentUserId, reactions = {}, onToggleReaction, loadReactionsForResults }) {
+export default function Leaderboard({ date, wodType, wodId, currentUserId, reactions = {}, onToggleReaction, loadReactionsForResults }) {
   const { leaderboardResults, rankedCount, loading, genderFilter, setGenderFilter } = useLeaderboard(date, wodType, wodId);
   const [expanded, setExpanded] = useState(false);
 

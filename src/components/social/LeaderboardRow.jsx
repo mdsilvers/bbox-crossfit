@@ -37,7 +37,7 @@ export default function LeaderboardRow({ rank, result, wodType, isCurrentUser, r
       onToggleReaction(result.id, type);
     }
     setShowPicker(false);
-  }, [onToggleReaction, result.id]);
+  }, [onToggleReaction, result.id, setShowPicker]);
 
   const canReact = !isCurrentUser && !!onToggleReaction;
 
@@ -49,7 +49,7 @@ export default function LeaderboardRow({ rank, result, wodType, isCurrentUser, r
       didLongPress.current = true;
       setShowPicker(true);
     }, 500);
-  }, [canReact]);
+  }, [canReact, setShowPicker]);
 
   const handlePointerUp = useCallback(() => {
     if (longPressTimer.current) {
@@ -69,7 +69,7 @@ export default function LeaderboardRow({ rank, result, wodType, isCurrentUser, r
     if (!canReact) return;
     e.preventDefault();
     setShowPicker(prev => !prev);
-  }, [canReact]);
+  }, [canReact, setShowPicker]);
 
   return (
     <div
