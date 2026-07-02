@@ -35,3 +35,7 @@ playwright/.cache/
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase local stack
+supabase/.temp/
+supabase/.branches/

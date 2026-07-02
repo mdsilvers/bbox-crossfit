@@ -2,22 +2,25 @@
 
 React/Vite gym-management app for BBOX CrossFit. Coaches program WODs and strength cycles; athletes log scores, photos, comments, reactions, badges, PRs, and body composition.
 
-## Supabase Projects
+## Supabase Environments
 
-There are two separate Supabase projects in normal use:
+- **Local test stack**: E2E tests, seed users, and schema experiments run against a
+  local Supabase stack (`supabase start`, Docker required). Config lives in
+  `supabase/config.toml` (API on port 55321, Postgres on 55322 — the 553xx range
+  avoids clashing with other local Supabase projects). Migrations in
+  `supabase/migrations/` mirror `supabase-schema-prod.sql`.
+- **BBOX Production**: live production project. Treat this as protected production data.
 
-- **Bbox app**: development/test project. Use this for local testing, E2E seed users, schema experiments, and non-production verification.
-- **bbox production**: live production project. Treat this as protected production data.
-
-Use the same schema files for both projects, but apply migrations deliberately to each project. Do not assume a migration run against **Bbox app** has also been run against **bbox production**.
+Apply migrations deliberately to each environment. Do not assume a migration run
+locally has also been run against **BBOX Production**.
 
 ## Environment Files
 
 - `npm run dev` uses the default Vite environment, typically `.env`, and may point at production if configured that way.
-- `npx vite --mode test` and Playwright use `.env.test`, which should point at the Bbox app test/development Supabase project.
-- `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` select the active Supabase project.
+- `npx vite --mode test` and Playwright use `.env.test`, which points at the local Supabase stack.
+- `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` select the active Supabase target.
 
-Before running mutations, seed scripts, cleanup scripts, or E2E tests, confirm the environment points at the intended project.
+Before running mutations, seed scripts, cleanup scripts, or E2E tests, confirm the environment points at the intended target.
 
 ## Commands
 
@@ -43,8 +46,8 @@ For a fresh Supabase project:
 
 `supabase-schema-prod.sql` is the consolidated schema for new projects. Migration files remain useful for bringing an existing project up to date without rebuilding it.
 
-Use `docs/supabase-project-checks.sql` as the read-only verification checklist for comparing **Bbox app** and **bbox production** before or after applying migrations.
+Use `docs/supabase-project-checks.sql` as the read-only verification checklist for comparing the local stack and **BBOX Production** before or after applying migrations.
 
 ## Production Safety
 
-Never run cleanup, destructive SQL, seed resets, or test scripts against **bbox production**. For production data changes, prepare SQL for review and execute it manually in Supabase after confirming the target project.
+Never run cleanup, destructive SQL, seed resets, or test scripts against **BBOX Production**. For production data changes, prepare SQL for review and execute it manually in Supabase after confirming the target project.

@@ -405,8 +405,8 @@ See `IMPLEMENTATION-PLAN.md` and `docs/superpowers/plans/` for detailed plans.
 
 ### Setup
 - **Unit Tests:** Vitest — tests pure logic modules (score-utils, badges)
-- **E2E Tests:** Playwright — tests full user flows against a dedicated test Supabase project
-- **Test Database:** Separate Supabase project (credentials in `.env.test`, gitignored)
+- **E2E Tests:** Playwright — tests full user flows against a local Supabase stack
+- **Test Database:** Local Supabase stack via `supabase start` (Docker required). Config in `supabase/config.toml` (API 55321, DB 55322 — 553xx avoids other local Supabase projects). `.env.test` (gitignored) points at it.
 - **Test Users:** `testcoach@bbox.test` (coach) and `testathlete@bbox.test` (athlete), created by seed script
 
 ### Commands
@@ -476,11 +476,11 @@ tests/
 A git pre-push hook runs the full regression suite (unit + E2E) before every push. Skip with `git push --no-verify` if needed.
 
 ### Supabase Setup
-There are two Supabase projects in regular use:
-- **Bbox app** — development/test project for local verification, seed users, and E2E tests.
-- **bbox production** — live production project; never run cleanup, seed-reset, or destructive test operations here.
+Two Supabase environments are in regular use:
+- **Local test stack** — `supabase start` (Docker) for local verification, seed users, and E2E tests. Migrations in `supabase/migrations/` mirror `supabase-schema-prod.sql`.
+- **BBOX Production** — live production project; never run cleanup, seed-reset, or destructive test operations here.
 
-Apply schema and migrations deliberately to each project. Do not assume a migration run against **Bbox app** has also been run against **bbox production**.
+Apply schema and migrations deliberately to each environment. Do not assume a migration run locally has also been run against **BBOX Production**.
 
 1. Create Supabase project
 2. Run `supabase-schema-prod.sql` in SQL Editor (authoritative schema — includes `has_photo` generated columns, the one-active-program unique index, and the comment-author trigger)
@@ -491,8 +491,8 @@ Apply schema and migrations deliberately to each project. Do not assume a migrat
 7. Disable email confirmation in Auth settings (or configure SMTP)
 8. Promote coaches manually (signup always creates athletes): `UPDATE profiles SET role = 'coach' WHERE email = '...';`
 
-### Test Supabase Project
-The **Bbox app** Supabase project is used for E2E testing. Credentials live in `.env.test` (gitignored). Test users are created by `npm run test:seed`.
+### Local Test Stack
+E2E tests run against the local Supabase stack: `supabase start`, then `npm run test:seed` to create the test users. The seeded coach must be promoted once per fresh DB: `psql "postgresql://postgres:postgres@127.0.0.1:55322/postgres" -c "UPDATE profiles SET role = 'coach' WHERE email = 'testcoach@bbox.test';"`. `.env.test` holds the local URL and the CLI's shared demo anon key.
 
 ---
 
