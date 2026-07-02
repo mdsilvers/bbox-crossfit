@@ -27,7 +27,7 @@ BBOX CrossFit is a React-based gym management app for CrossFit boxes. Coaches pr
 
 ```bash
 # Development
-npm run dev              # Start dev server at localhost:5173 (production DB)
+npm run dev              # Start dev server at localhost:5173 (uses .env)
 npx vite --mode test     # Start dev server with test DB (.env.test)
 
 # Production
@@ -476,6 +476,12 @@ tests/
 A git pre-push hook runs the full regression suite (unit + E2E) before every push. Skip with `git push --no-verify` if needed.
 
 ### Supabase Setup
+There are two Supabase projects in regular use:
+- **Bbox app** — development/test project for local verification, seed users, and E2E tests.
+- **bbox production** — live production project; never run cleanup, seed-reset, or destructive test operations here.
+
+Apply schema and migrations deliberately to each project. Do not assume a migration run against **Bbox app** has also been run against **bbox production**.
+
 1. Create Supabase project
 2. Run `supabase-schema-prod.sql` in SQL Editor (authoritative schema — includes `has_photo` generated columns, the one-active-program unique index, and the comment-author trigger)
 3. Run `supabase-migration-strength-programs.sql` for strength program tables (if not in base schema)
@@ -486,7 +492,7 @@ A git pre-push hook runs the full regression suite (unit + E2E) before every pus
 8. Promote coaches manually (signup always creates athletes): `UPDATE profiles SET role = 'coach' WHERE email = '...';`
 
 ### Test Supabase Project
-A separate Supabase project is used for E2E testing. Credentials in `.env.test` (gitignored). Run the same schema + migration scripts on the test project. Test users created by `npm run test:seed`.
+The **Bbox app** Supabase project is used for E2E testing. Credentials live in `.env.test` (gitignored). Test users are created by `npm run test:seed`.
 
 ---
 
