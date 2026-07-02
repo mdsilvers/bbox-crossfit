@@ -401,7 +401,7 @@ test.describe('Strength Program', () => {
     await page.locator('button:has-text("Override")').click();
     await page.waitForTimeout(500);
 
-    expect(getMsg()).toContain('valid session number');
+    expect(getMsg()).toContain('session number between 1 and');
   });
 
   test('athlete cannot enter invalid 1RM', async ({ page }) => {
